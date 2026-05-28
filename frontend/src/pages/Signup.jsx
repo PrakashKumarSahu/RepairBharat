@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, replace } from 'react-router-dom';
 import '../styles/Signup.css';
 import {
-  FiUser, FiLock, FiMail, FiEye, FiEyeOff,
+  FiUser, FiLock, FiMail, FiEye, FiEyeOff, FiPhone,
   FiArrowRight, FiArrowLeft, FiTool,
 } from 'react-icons/fi';
 import { MdBuild, MdStorefront } from 'react-icons/md';
@@ -10,9 +10,9 @@ import { signup } from '../services';
 import toast, { Toaster } from 'react-hot-toast';
 
 const ROLES = [
-  { id: 'customer',   label: 'Customer',   icon: '👤', desc: 'Get repairs done' },
-  { id: 'shopowner',  label: 'Shop Owner', icon: '🏪', desc: 'Manage your shop'  },
-  { id: 'technician', label: 'Technician', icon: '🔧', desc: 'Offer repair skills' },
+  { id: 'customer',   label: 'Customer',   icon: <FiUser />,     desc: 'Get repairs done' },
+  { id: 'shop_owner',  label: 'Shop Owner', icon: <MdStorefront />, desc: 'Manage your shop'  },
+  { id: 'technician', label: 'Technician', icon: <FiTool />,     desc: 'Offer repair skills' },
 ];
 
 export default function Signup() {
@@ -21,6 +21,7 @@ export default function Signup() {
   const [form, setForm] = useState({
     username:            '',
     email:               '',
+    phone:               '',
     password:            '',
     confirmPassword:     '',
     role:                '',
@@ -47,6 +48,8 @@ export default function Signup() {
     else if (form.username.length < 3)   e.username = 'At least 3 characters';
     if (!form.email.trim())              e.email    = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Enter a valid email';
+    if (!form.phone.trim())              e.phone    = 'Phone number is required';
+    else if (!/^\d{10}$/.test(form.phone)) e.phone   = 'Enter a valid 10 digit phone number';
     if (form.password.length < 8)        e.password = 'Minimum 8 characters needed';
     if (form.confirmPassword !== form.password) e.confirmPassword = 'Passwords do not match';
     if (!form.role)                      e.role     = 'Please select your role';
@@ -67,7 +70,7 @@ export default function Signup() {
     if(response.status == 201){
       toast.success("Signed up successfully")
       setTimeout(() => {
-        navigate("/")
+        navigate("/login")
       }, 1000);
     }
     if(response.status == 400){
@@ -85,7 +88,8 @@ export default function Signup() {
 
   return (
     <div className="su-page">
-      <Toaster position='top'/>
+         <Toaster position='top-center'/>
+     
       <div className="su-bg-orb su-bg-orb--1" />
       <div className="su-bg-orb su-bg-orb--2" />
       <div className="su-bg-orb su-bg-orb--3" />
@@ -168,6 +172,33 @@ export default function Signup() {
             />
           </div>
 
+          {/* ── Row 3: Phone ── */}
+          <Field
+            id="su-phone"
+            label="Phone Number"
+            error={errors.phone}
+            icon={<FiPhone />}
+            prefix="+91"
+            input={
+              <input
+                id="su-phone"
+                className="su-phone-input"
+                type="tel"
+                inputMode="numeric"
+                placeholder="Enter 10 digit mobile number"
+                autoComplete="tel"
+                minLength={10}
+                maxLength={10}
+                value={form.phone}
+                onChange={(e) => {
+                  const digitsOnly = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  setForm((p) => ({ ...p, phone: digitsOnly }));
+                  setErrors((p) => ({ ...p, phone: '' }));
+                }}
+              />
+            }
+          />
+
           {/* ── Role Selector ── */}
           <div className="su-roles-wrap">
             <p className="su-field-label">I am a</p>
@@ -221,7 +252,7 @@ export default function Signup() {
         {/* ── Footer ── */}
         <p className="su-footer">
           Already have an account?{' '}
-          <Link to="/" className="su-footer-link">Sign in</Link>
+          <Link to="/login" className="su-footer-link">Sign in</Link>
         </p>
 
       </div>
@@ -229,12 +260,13 @@ export default function Signup() {
   );
 }
 
-function Field({ id, label, icon, toggle, input, error }) {
+function Field({ id, label, icon, prefix, toggle, input, error }) {
   return (
     <div className={`su-field ${error ? 'su-field--error' : ''}`}>
       <label htmlFor={id}>{label}</label>
       <div className="su-input-wrap">
         <span className="su-input-icon">{icon}</span>
+        {prefix && <span className="su-input-prefix">{prefix}</span>}
         {input}
         {toggle}
       </div>

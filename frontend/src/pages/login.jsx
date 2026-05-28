@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import '../styles/Home.css';
-import { FiUser, FiLock, FiEye, FiEyeOff, FiArrowRight } from 'react-icons/fi';
-import { MdBuild } from 'react-icons/md';
+import { FiUser, FiLock, FiEye, FiEyeOff, FiArrowRight, FiTool } from 'react-icons/fi';
+import { MdBuild, MdStorefront } from 'react-icons/md';
+import { getUserDetails, signin, useUserContext } from '../services';
+import toast, { Toaster } from 'react-hot-toast';
 
 const ROLES = [
-  { id: 1, label: 'Customer',   icon: '👤', key: 'customer'   },
-  { id: 2, label: 'Technician', icon: '🔧', key: 'technician' },
-  { id: 3, label: 'Shop Owner', icon: '🏪', key: 'shopowner'  },
+  { id: 1,   label: 'Customer',   icon: <FiUser />,     desc: 'Get repairs done' },
+  { id: 2,  label: 'Shop Owner', icon: <MdStorefront />, desc: 'Manage your shop'  },
+  { id: 3, label: 'Technician', icon: <FiTool />,     desc: 'Offer repair skills' },
 ];
 
 export default function Home() {
@@ -18,6 +20,7 @@ export default function Home() {
   const [selectedRole, setSelectedRole] = useState(null);
   const [loading, setLoading]         = useState(false);
   const [errors, setErrors]           = useState({});
+  const {user, setUser} =useUserContext();
 
   const validate = () => {
     const e = {};
@@ -27,20 +30,33 @@ export default function Home() {
     return e;
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async(e) => {
     e.preventDefault();
     const e2 = validate();
     if (Object.keys(e2).length) { setErrors(e2); return; }
     setErrors({});
     setLoading(true);
     // Simulate API call
-    setTimeout(() => {
+    const response = await signin({username,password});
+    if(response.status == 200){
+      navigate("/dashboard")
+      setUser(getUserDetails(JSON.parse(localStorage.getItem("token")).key))
+    }else{
+      toast.error("User does not found");
       setLoading(false);
-      navigate('/dashboard');
-    }, 1400);
+    }
   };
 
+  useEffect(()=>{
+    if(user !==null){
+      navigate("/dashboard",{replace:true});
+      
+    }
+  },[user]);
+
   return (
+    <>
+    <Toaster position='top-center'/>
     <div className="home-page">
       {/* ── Background particles ── */}
       <div className="home-bg-orb home-bg-orb--1" />
@@ -157,5 +173,6 @@ export default function Home() {
 
       </div>
     </div>
+    </>
   );
 }

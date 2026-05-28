@@ -1,14 +1,33 @@
-import { createContext } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { getUserDetails } from "./api";
 
 
 const userContext = createContext(null);
 
 export const UserContextProvider = ({children})=>{
+    const [user, setUser] = useState(null);
+    useEffect(()=>{
+        const item = JSON.parse(localStorage.getItem("token"));
+        if(item){
+            if((item.expiration - Date.now()) <= 0 ){
+                console.log("I RUNNED BRO");
+                localStorage.removeItem("token");
+                setUser(null);
+            }
+            else{
+                const data = getUserDetails(item.key);
+                setUser(data);
+            }
+        }
 
-
-
-
-    return <userContext.Provider value="">
+        
+    },[]);
+    return <userContext.Provider value={{user, setUser}}>
         {children}
     </userContext.Provider>
 }
+
+
+
+
+export const useUserContext = ()=>useContext(userContext);

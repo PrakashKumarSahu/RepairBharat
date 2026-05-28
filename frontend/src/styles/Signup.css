@@ -186,6 +186,36 @@
   align-items: center;
 }
 
+.su-input-wrap--prefix .su-input-prefix {
+  margin-left: 40px;
+  height: 100%;
+  min-height: 46px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  background: var(--su-input-bg);
+  border: 1.5px solid var(--su-input-border);
+  border-right: 0;
+  border-radius: 12px 0 0 12px;
+  color: var(--su-text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.su-input-wrap--prefix input {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  border-left: 0;
+  border-radius: 0 12px 12px 0;
+  padding-left: 13px;
+}
+
+.su-input-wrap--prefix input:focus {
+  border-left: 0;
+}
+
 .su-input-icon {
   position: absolute;
   left: 13px;
