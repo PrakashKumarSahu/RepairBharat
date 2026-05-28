@@ -6,6 +6,8 @@ import {
   FiArrowRight, FiArrowLeft, FiTool,
 } from 'react-icons/fi';
 import { MdBuild, MdStorefront } from 'react-icons/md';
+import { signup } from '../services';
+import toast, { Toaster } from 'react-hot-toast';
 
 const ROLES = [
   { id: 'customer',   label: 'Customer',   icon: '👤', desc: 'Get repairs done' },
@@ -45,7 +47,7 @@ export default function Signup() {
     else if (form.username.length < 3)   e.username = 'At least 3 characters';
     if (!form.email.trim())              e.email    = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Enter a valid email';
-    if (form.password.length < 6)        e.password = 'Minimum 6 characters';
+    if (form.password.length < 8)        e.password = 'Minimum 8 characters needed';
     if (form.confirmPassword !== form.password) e.confirmPassword = 'Passwords do not match';
     if (!form.role)                      e.role     = 'Please select your role';
     if (form.role === 'technician' && !form.shop_to_which_he_belong.trim())
@@ -53,21 +55,37 @@ export default function Signup() {
     return e;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async(e) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setErrors({});
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
+    
+    const response = await signup(form);
+
+    if(response.status == 201){
+      toast.success("Signed up successfully")
+      setTimeout(() => {
+        navigate("/")
+      }, 1000);
+    }
+    if(response.status == 400){
+      const data = response.data;
+      if(data.username){
+        setErrors((prev)=>({...prev, username:"username already exists"}));
+      }
+      if(data.password){
+        setErrors((p)=>({...p, password:"password must contain number and characters"}))
+      }
       setLoading(false);
-      navigate('/');
-    }, 1600);
+    }
+
   };
 
   return (
     <div className="su-page">
+      <Toaster position='top'/>
       <div className="su-bg-orb su-bg-orb--1" />
       <div className="su-bg-orb su-bg-orb--2" />
       <div className="su-bg-orb su-bg-orb--3" />
@@ -126,7 +144,7 @@ export default function Signup() {
               input={
                 <input
                   id="su-password" type={showPass ? 'text' : 'password'}
-                  placeholder="Min. 6 characters" autoComplete="new-password"
+                  placeholder="Min. 8 characters" autoComplete="new-password"
                   value={form.password} onChange={set('password')}
                 />
               }
@@ -211,7 +229,6 @@ export default function Signup() {
   );
 }
 
-// ─── Reusable field wrapper ───────────────────────────────────────────────────
 function Field({ id, label, icon, toggle, input, error }) {
   return (
     <div className={`su-field ${error ? 'su-field--error' : ''}`}>
