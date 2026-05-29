@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Home from './pages/login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
@@ -10,6 +10,7 @@ function App() {
     <>
     <UserContextProvider>
     <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path='/dashboard' element={<Dashboard />} />
         <Route path="/login" element={<Home />} />
         <Route path="/signup" element={<Signup />} />

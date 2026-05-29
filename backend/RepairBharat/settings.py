@@ -38,10 +38,18 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
+    
     'rest_framework',
     'rest_framework_simplejwt',
     'accounts',
+    'inventory',
+    'billing',
+    'core',
+    'organizations',
+    'providers',
+    'devices',
+    'workflow',
+    'repairs',
 ]
 
 MIDDLEWARE = [
@@ -53,13 +61,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
 ]
 
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",       # React dev server
-    "http://localhost:5173",  
-]
 ROOT_URLCONF = 'RepairBharat.urls'
 
 TEMPLATES = [
@@ -138,6 +143,11 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
-
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 AUTH_USER_MODEL = 'accounts.CustomUser'
 STATIC_URL = 'static/'
+
+# InvoiceNinja Integration Settings (Sandbox default)
+INVOICENINJA_URL = "https://demo.invoiceninja.com"
+INVOICENINJA_API_KEY = "demo_token"

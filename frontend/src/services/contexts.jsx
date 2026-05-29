@@ -15,12 +15,13 @@ export const UserContextProvider = ({children})=>{
                 setUser(null);
             }
             else{
-                const data = getUserDetails(item.key);
-                setUser(data);
+                const fetchUser = async () => {
+                    const data = await getUserDetails(item.key);
+                    setUser(data);
+                };
+                fetchUser();
             }
         }
-
-        
     },[]);
     return <userContext.Provider value={{user, setUser}}>
         {children}

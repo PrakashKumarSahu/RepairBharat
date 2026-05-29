@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface-variant": "#444653",
+                    "inverse-on-surface": "#eaf1ff",
+                    "surface-container-high": "#dce9ff",
+                    "on-primary-container": "#a8b8ff",
+                    "on-error": "#ffffff",
+                    "secondary-container": "#92f5a4",
+                    "primary-fixed-dim": "#b8c4ff",
+                    "on-primary": "#ffffff",
+                    "secondary-fixed": "#95f8a7",
+                    "on-secondary-fixed": "#00210a",
+                    "tertiary-fixed": "#ffdcc3",
+                    "surface": "#f8f9ff",
+                    "on-tertiary-container": "#ffa85d",
+                    "on-background": "#0b1c30",
+                    "surface-container": "#e5eeff",
+                    "surface-bright": "#f8f9ff",
+                    "error-container": "#ffdad6",
+                    "tertiary-container": "#743d00",
+                    "surface-tint": "#3755c3",
+                    "primary": "#00288e",
+                    "on-tertiary-fixed": "#2f1500",
+                    "on-secondary": "#ffffff",
+                    "secondary": "#006d30",
+                    "on-primary-fixed-variant": "#173bab",
+                    "on-primary-fixed": "#001453",
+                    "on-secondary-container": "#007233",
+                    "error": "#ba1a1a",
+                    "surface-container-highest": "#d3e4fe",
+                    "outline-variant": "#c4c5d5",
+                    "inverse-primary": "#b8c4ff",
+                    "on-secondary-fixed-variant": "#005323",
+                    "surface-container-low": "#eff4ff",
+                    "on-error-container": "#93000a",
+                    "background": "#f8f9ff",
+                    "on-surface": "#0b1c30",
+                    "tertiary-fixed-dim": "#ffb77d",
+                    "outline": "#757684",
+                    "secondary-fixed-dim": "#79db8d",
+                    "on-tertiary": "#ffffff",
+                    "surface-dim": "#cbdbf5",
+                    "tertiary": "#532a00",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-fixed-variant": "#6e3900",
+                    "surface-variant": "#d3e4fe",
+                    "inverse-surface": "#213145",
+                    "primary-container": "#1e40af",
+                    "primary-fixed": "#dde1ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "16px",
+                    "gutter": "16px",
+                    "md": "20px",
+                    "touch-target": "48px",
+                    "margin-desktop": "40px",
+                    "base": "8px",
+                    "lg": "32px",
+                    "sm": "12px",
+                    "xs": "4px",
+                    "xl": "48px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-xl": ["Inter"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col">
+<!-- Login screen: No navigation shell as per "Destination Rule" (Transactional/Linear) -->
+<main class="flex-grow flex flex-col justify-between px-margin-mobile md:px-margin-desktop py-xl max-w-lg mx-auto w-full">
+<!-- Header Section with Brand Identity -->
+<div class="flex flex-col items-center text-center mt-xl">
+<!-- Brand Logo Space -->
+<div class="mb-lg">
+<div class="w-20 h-20 bg-primary-container rounded-xl flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined text-[48px] text-on-primary-fixed" style="font-variation-settings: 'FILL' 1;">handyman</span>
+</div>
+</div>
+<h1 class="font-headline-xl text-headline-xl text-primary mb-xs">FixIt Pro</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Bharat Repair Logic</p>
+</div>
+<!-- Content Canvas -->
+<div class="flex flex-col mt-xl">
+<div class="mb-lg">
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Welcome back</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-xs">Enter your mobile number to access your workshop dashboard.</p>
+</div>
+<!-- Input Group -->
+<div class="space-y-sm">
+<label class="font-label-md text-label-md text-on-surface-variant ml-xs" for="mobile-number">Mobile Number</label>
+<div class="relative flex items-center">
+<div class="absolute inset-y-0 left-0 flex items-center pl-md pointer-events-none">
+<span class="font-body-md text-body-md text-on-surface font-semibold border-r border-outline-variant pr-sm">+91</span>
+</div>
+<input class="w-full h-touch-target pl-[72px] pr-md bg-surface-container-lowest border border-outline rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all font-body-md text-body-md" id="mobile-number" name="mobile-number" placeholder="98765 43210" type="tel"/>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant px-xs">An OTP will be sent to this number for verification.</p>
+</div>
+</div>
+<!-- Footer Action Section -->
+<div class="mt-xl pb-lg flex flex-col space-y-md">
+<!-- Hero Image / Visual Anchor for Trust -->
+<div class="hidden md:block w-full h-40 rounded-xl overflow-hidden mb-md">
+<img alt="Professional technician environment" class="w-full h-full object-cover" data-alt="A clean and professional repair workshop environment with organized tools and high-tech equipment on a brightly lit workbench. The atmosphere is serene and orderly, reflecting a sense of technical competence and modern efficiency. The lighting is soft and high-key, aligning with a light-mode UI aesthetic. The color palette features deep tech blues and neutral whites, creating a trustworthy and stable professional atmosphere." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCX-Uk8fiHUq443czW701aKSlLSW0wGJJ_g6mWxSZT9V-fy5tJTj_uHObDfl4GF03yW5F0gqj7FDcsk5ZA1eWI50_Vf81ShbLa9Ayp4rC1Is74rEe3FKS0btqyQLGJ1NyRJMGDuuc-aW94EFFv2jsbV2XZrTDl4Sp4HAfc8abT12PPgagNu8Hc1egkoEc4GcFHioL-XjlI4GgUEQZOK16uHqTxFQ-y7j4oYtW2MacQF7jTD9yST-SFqPN52ctXmoAGlUrkh3pVSMxgO"/>
+</div>
+<button class="w-full h-touch-target bg-primary text-on-primary font-label-md text-label-md rounded-lg shadow-sm hover:bg-primary-container active:scale-95 transition-all duration-150 flex items-center justify-center gap-sm">
+                Get OTP
+                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_forward</span>
+</button>
+<div class="flex items-center justify-center pt-md">
+<p class="font-label-sm text-label-sm text-on-surface-variant">
+                    New to FixIt Pro? 
+                    <a class="text-primary font-bold hover:underline" href="#">Partner with us</a>
+</p>
+</div>
+</div>
+</main>
+<!-- Visual Layer for minimalist depth -->
+<div class="fixed bottom-0 left-0 w-full h-1 bg-primary"></div>
+</body></html>

@@ -80,7 +80,6 @@ class TechnicianProfile(models.Model):
     is_verified = models.BooleanField(default=False)
 
     service_radius_km = models.PositiveIntegerField(default=10)
-
     shop = models.ForeignKey(
         ShopOwnerProfile,
         on_delete=models.SET_NULL,

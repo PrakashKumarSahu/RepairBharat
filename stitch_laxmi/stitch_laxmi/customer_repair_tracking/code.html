@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary": "#ffffff",
+                    "outline": "#757684",
+                    "inverse-on-surface": "#eaf1ff",
+                    "on-secondary-fixed": "#00210a",
+                    "on-tertiary-container": "#ffa85d",
+                    "surface-tint": "#3755c3",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-container": "#a8b8ff",
+                    "secondary-fixed": "#95f8a7",
+                    "secondary-container": "#92f5a4",
+                    "surface-dim": "#cbdbf5",
+                    "on-surface": "#0b1c30",
+                    "surface-container": "#e5eeff",
+                    "on-tertiary": "#ffffff",
+                    "tertiary": "#532a00",
+                    "on-error-container": "#93000a",
+                    "secondary": "#006d30",
+                    "outline-variant": "#c4c5d5",
+                    "on-surface-variant": "#444653",
+                    "tertiary-container": "#743d00",
+                    "surface": "#f8f9ff",
+                    "primary-fixed": "#dde1ff",
+                    "inverse-surface": "#213145",
+                    "primary": "#00288e",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-error": "#ffffff",
+                    "surface-bright": "#f8f9ff",
+                    "on-primary-fixed": "#001453",
+                    "error": "#ba1a1a",
+                    "on-background": "#0b1c30",
+                    "tertiary-fixed-dim": "#ffb77d",
+                    "surface-container-high": "#dce9ff",
+                    "on-primary-fixed-variant": "#173bab",
+                    "on-tertiary-fixed": "#2f1500",
+                    "primary-container": "#1e40af",
+                    "on-secondary-container": "#007233",
+                    "surface-container-low": "#eff4ff",
+                    "surface-variant": "#d3e4fe",
+                    "primary-fixed-dim": "#b8c4ff",
+                    "error-container": "#ffdad6",
+                    "on-secondary-fixed-variant": "#005323",
+                    "tertiary-fixed": "#ffdcc3",
+                    "inverse-primary": "#b8c4ff",
+                    "on-primary": "#ffffff",
+                    "secondary-fixed-dim": "#79db8d",
+                    "on-tertiary-fixed-variant": "#6e3900",
+                    "background": "#f8f9ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xs": "4px",
+                    "gutter": "16px",
+                    "xl": "48px",
+                    "md": "20px",
+                    "touch-target": "48px",
+                    "margin-mobile": "16px",
+                    "lg": "32px",
+                    "base": "8px",
+                    "sm": "12px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-xl": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "label-md": ["Inter"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #f8f9ff;
+            font-family: 'Inter', sans-serif;
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface shadow-sm flex justify-between items-center px-margin-mobile h-touch-target">
+<div class="flex items-center gap-base">
+<span class="material-symbols-outlined text-primary" data-icon="menu">menu</span>
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary">FixIt Pro</h1>
+</div>
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="notifications">notifications</span>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-highest">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDV7bUH8jEt_HQrDL8MtbW16mjFgC-XW0VqNQNUgE_qTa-99nrl74CNXaXON4q1fbqSHzzqqIySwAaqKfv36MVNLqsvZttvp4QP8rv2f2b-RN1b1NYrH5SVZT7nklcjLb8bvJPsj7q7kE8n3nOccJ4nu_j_JBriBUZG_I4MXg9cN8oCq0nsAuXDXO-MYwuNxT18CEfz2czs3O10N9VaZciV4o9wGOqtLusW3kQSHJmvKIRPjlaZCbO0nWfFSx_hJ95xSAiiCpduCNkN"/>
+</div>
+</div>
+</header>
+<main class="pt-24 pb-32 px-margin-mobile md:px-margin-desktop max-w-4xl mx-auto">
+<!-- Status Hero Card -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden mb-lg border-l-4 border-primary">
+<div class="p-lg">
+<div class="flex justify-between items-start mb-md">
+<div>
+<p class="font-label-md text-label-md text-outline mb-xs">Job #RO-8821</p>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">iPhone 14 Pro - Screen Replacement</h2>
+</div>
+<span class="bg-primary-container text-on-primary-container px-sm py-xs rounded-full font-label-md text-label-md"><div class="flex items-center gap-xs"><span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">auto_awesome</span><span>In-Progress • High Priority</span></div></span>
+</div>
+<!-- Progress Tracker -->
+<div class="relative py-lg">
+<div class="absolute top-1/2 left-0 w-full h-1 bg-surface-container-high -translate-y-1/2"></div>
+<div class="absolute top-1/2 left-0 w-2/3 h-1 bg-primary -translate-y-1/2"></div>
+<div class="relative flex justify-between">
+<div class="flex flex-col items-center gap-xs">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center z-10 shadow-md">
+<span class="material-symbols-outlined text-[18px]" data-icon="check">check</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface">Received</span>
+</div>
+<div class="flex flex-col items-center gap-xs">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center z-10 shadow-md">
+<span class="material-symbols-outlined text-[18px]" data-icon="build">build</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface">Repairing</span>
+</div>
+<div class="flex flex-col items-center gap-xs">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest text-outline flex items-center justify-center z-10">
+<span class="material-symbols-outlined text-[18px]" data-icon="fact_check">fact_check</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline">Testing</span>
+</div>
+<div class="flex flex-col items-center gap-xs">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest text-outline flex items-center justify-center z-10">
+<span class="material-symbols-outlined text-[18px]" data-icon="local_shipping">local_shipping</span>
+</div>
+<span class="font-label-sm text-label-sm text-outline">Ready</span>
+</div>
+</div>
+</div>
+<!-- Assigned Technician Badge -->
+<div class="mt-md p-sm bg-surface-container-low rounded-lg border border-outline-variant flex items-center gap-sm">
+<div class="relative">
+<img alt="Technician Sarah" class="w-10 h-10 rounded-full object-cover border border-white" src="https://lh3.googleusercontent.com/aida-public/AG849-O5H5-O9m7iI7_3R-6W-t_9Xp_N-S-G-f-b-Y-P-p-c-d-e-f-g-h-i-j"/>
+<div class="absolute bottom-0 right-0 bg-secondary text-on-secondary rounded-full p-[2px]">
+<span class="material-symbols-outlined text-[12px] block" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Assigned Specialist</p>
+<p class="font-label-md text-label-md text-on-surface">Sarah Mitchell <span class="text-secondary ml-xs">Verified Technician</span></p>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-low p-lg grid grid-cols-2 gap-md md:grid-cols-3">
+<div>
+<p class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Estimated Cost</p>
+<p class="font-headline-md text-headline-md text-primary">₹14,499</p>
+</div>
+<div>
+<p class="font-label-sm text-label-sm text-outline uppercase tracking-wider">Delivery Date</p>
+<p class="font-headline-md text-headline-md text-on-surface">Oct 24, 2023</p>
+</div>
+<div class="col-span-2 md:col-span-1">
+<button class="w-full h-touch-target bg-primary text-on-primary rounded-lg font-label-md flex items-center justify-center gap-base active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="chat">chat</span>
+                        Message Shop
+                    </button>
+</div>
+</div>
+</section>
+<!-- Detailed Timeline -->
+<section class="mb-xl">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-md">Repair Updates</h3>
+<div class="space-y-4">
+<div class="relative pl-lg pb-lg border-l-2 border-primary ml-2">
+<div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-primary border-4 border-background"></div>
+<div class="flex flex-col bg-primary-container/10 p-md rounded-lg border border-primary/20 shadow-sm">
+<span class="font-label-sm text-label-sm text-primary mb-xs">Today, 10:45 AM</span>
+<h4 class="font-label-md text-label-md text-on-surface font-bold">Parts Sourced &amp; Repair Started</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Original OLED display module has arrived. Our technician is currently performing the screen replacement.</p>
+</div>
+</div>
+<div class="relative pl-lg pb-lg border-l-2 border-outline-variant ml-2">
+<div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-outline-variant border-4 border-background"></div>
+<div class="flex flex-col bg-surface-container-low p-md rounded-lg border border-outline-variant/30 shadow-sm">
+<span class="font-label-sm text-label-sm text-outline mb-xs">Yesterday, 02:30 PM</span>
+<h4 class="font-label-md text-label-md text-on-surface font-bold">Device Diagnostics Completed</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Initial inspection confirmed display damage. Internal components checked and verified safe for repair.</p>
+</div>
+</div>
+<div class="relative pl-lg pb-lg ml-2">
+<div class="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-outline-variant border-4 border-background"></div>
+<div class="flex flex-col bg-surface-container-low p-md rounded-lg border border-outline-variant/30 shadow-sm">
+<span class="font-label-sm text-label-sm text-outline mb-xs">Oct 21, 11:00 AM</span>
+<h4 class="font-label-md text-label-md text-on-surface font-bold">Device Received at Workshop</h4>
+<p class="font-body-md text-body-md text-on-surface-variant">Your iPhone was checked in at our Bengaluru Master Station.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Quality Guarantee and Repair History -->
+<section class="space-y-md">
+<!-- Quality Seal -->
+<div class="flex items-center gap-md bg-secondary-container/10 border border-secondary-container rounded-xl p-md shadow-sm">
+<div class="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined text-[32px]" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+</div>
+<div>
+<h4 class="font-label-md text-label-md text-on-secondary-container font-bold">Quality Guaranteed</h4>
+<p class="font-label-sm text-label-sm text-on-secondary-container/80">90-day warranty on all original parts and labor.</p>
+</div>
+</div>
+<!-- Repair History Link -->
+<div class="bg-surface-container rounded-xl p-lg flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[32px]" data-icon="history">history</span>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">Repair History</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">You have 2 previous service records.</p>
+</div>
+</div>
+<button class="w-touch-target h-touch-target rounded-full hover:bg-surface-container-highest transition-colors flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</section>
+<section class="mt-lg">
+<div class="bg-tertiary-fixed text-on-tertiary-fixed p-md rounded-xl border border-tertiary/20 flex items-start gap-md shadow-sm">
+<div class="w-10 h-10 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined">lightbulb</span>
+</div>
+<div>
+<p class="font-label-md text-label-md font-bold mb-xs">Tech Tip</p>
+<p class="font-body-md text-body-md opacity-90">Tip: Calibrate your new screen's brightness for better battery life.</p>
+</div>
+</div>
+</section></main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface shadow-lg rounded-t-xl flex justify-around items-center h-xl px-gutter">
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="build">build</span>
+<span class="font-label-sm text-label-sm">Jobs</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-label-sm text-label-sm">Inventory</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-label-sm text-label-sm">Analytics</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+</body></html>

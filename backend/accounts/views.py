@@ -46,3 +46,14 @@ class ChangePasswordView(APIView):
             {"detail": "Password changed successfully"},
             status=status.HTTP_200_OK
         )
+
+
+class CustomerListView(generics.ListAPIView):
+    serializer_class = UserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role in ["shop_owner", "technician"]:
+            return CustomUser.objects.filter(role="customer").order_by("username")
+        return CustomUser.objects.none()

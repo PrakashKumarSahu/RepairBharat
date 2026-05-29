@@ -24,5 +24,13 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('api/token/', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
-
+    path('api/inventory/', include('inventory.urls')),
+    path('api/billing/', include('billing.urls')),
+    
+    # Decoupled Enterprise Endpoints
+    path('api/orgs/', include('organizations.urls')),
+    path('api/providers/', include('providers.urls')),
+    path('api/devices/', include('devices.urls')),
+    path('api/workflow/', include('workflow.urls')),
+    path('api/repairs/', include('repairs.urls')),
 ]

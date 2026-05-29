@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface-variant": "#444653",
+                    "inverse-on-surface": "#eaf1ff",
+                    "surface-container-high": "#dce9ff",
+                    "on-primary-container": "#a8b8ff",
+                    "on-error": "#ffffff",
+                    "secondary-container": "#92f5a4",
+                    "primary-fixed-dim": "#b8c4ff",
+                    "on-primary": "#ffffff",
+                    "secondary-fixed": "#95f8a7",
+                    "on-secondary-fixed": "#00210a",
+                    "tertiary-fixed": "#ffdcc3",
+                    "surface": "#f8f9ff",
+                    "on-tertiary-container": "#ffa85d",
+                    "on-background": "#0b1c30",
+                    "surface-container": "#e5eeff",
+                    "surface-bright": "#f8f9ff",
+                    "error-container": "#ffdad6",
+                    "tertiary-container": "#743d00",
+                    "surface-tint": "#3755c3",
+                    "primary": "#00288e",
+                    "on-tertiary-fixed": "#2f1500",
+                    "on-secondary": "#ffffff",
+                    "secondary": "#006d30",
+                    "on-primary-fixed-variant": "#173bab",
+                    "on-primary-fixed": "#001453",
+                    "on-secondary-container": "#007233",
+                    "error": "#ba1a1a",
+                    "surface-container-highest": "#d3e4fe",
+                    "outline-variant": "#c4c5d5",
+                    "inverse-primary": "#b8c4ff",
+                    "on-secondary-fixed-variant": "#005323",
+                    "surface-container-low": "#eff4ff",
+                    "on-error-container": "#93000a",
+                    "background": "#f8f9ff",
+                    "on-surface": "#0b1c30",
+                    "tertiary-fixed-dim": "#ffb77d",
+                    "outline": "#757684",
+                    "secondary-fixed-dim": "#79db8d",
+                    "on-tertiary": "#ffffff",
+                    "surface-dim": "#cbdbf5",
+                    "tertiary": "#532a00",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-fixed-variant": "#6e3900",
+                    "surface-variant": "#d3e4fe",
+                    "inverse-surface": "#213145",
+                    "primary-container": "#1e40af",
+                    "primary-fixed": "#dde1ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "margin-mobile": "16px",
+                    "gutter": "16px",
+                    "md": "20px",
+                    "touch-target": "48px",
+                    "margin-desktop": "40px",
+                    "base": "8px",
+                    "lg": "32px",
+                    "sm": "12px",
+                    "xs": "4px",
+                    "xl": "48px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Inter"],
+                    "body-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "headline-xl": ["Inter"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9ff;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col">
+<!-- Top Navigation Bar - Contextual Suppression Check: Hidden for transactional flow -->
+<main class="flex-grow flex items-center justify-center px-margin-mobile py-xl">
+<div class="w-full max-w-[440px]">
+<!-- Hero Graphic Section (Asymmetric Layout) -->
+<div class="mb-lg flex justify-center">
+<div class="relative w-32 h-32 bg-surface-container-high rounded-full flex items-center justify-center overflow-hidden shadow-sm">
+<img alt="FixIt Pro Hero" class="w-16 h-16 z-10" data-alt="A clean and professional digital illustration of a smartphone displaying a large secure shield icon in the center. The background features subtle technical blueprints of electronic components in a soft blue tint. The lighting is bright and modern, creating a trustworthy and high-tech atmosphere consistent with a premium repair service application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuApiNXWV1XrdlYf_EhzXBVb3e1M6P4TrxzhIkvODE8zEoJkJbgVE0IIqPl4P-3_7STxboPVJk9dJqIQ8Xcd4Ml7vXTOfHFiu5fUcULD0WKB5BacE1pNQK-EFU92cA8heHoF2Og1BeKiIH5oI4eDLVENSyPJPmz17WOaDOXlMhOx62dh8N3eI83MEfDEmApmQuAiPDbEvYzEkLyJOLnygcrjhEZUOc3xvsz8rB8ohK9WYOqRj0mHR3qLQQHJnDUeXRPfY05nqoU7Y8tG"/>
+<div class="absolute inset-0 bg-gradient-to-tr from-primary/10 to-transparent"></div>
+</div>
+</div>
+<!-- Content Canvas -->
+<div class="bg-surface-container-lowest p-lg rounded-xl shadow-sm">
+<header class="mb-lg text-center">
+<h1 class="font-headline-xl text-headline-xl text-primary mb-xs">Verification Code</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Sent to +91 98XXX-XX210</p>
+</header>
+<!-- OTP Input Grid -->
+<div class="grid grid-cols-6 gap-xs mb-lg">
+<input class="w-full h-touch-target text-center font-headline-md text-headline-md border border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 bg-surface transition-all outline-none" maxlength="1" type="text" value="5"/>
+<input class="w-full h-touch-target text-center font-headline-md text-headline-md border border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 bg-surface transition-all outline-none" maxlength="1" type="text" value="8"/>
+<input class="w-full h-touch-target text-center font-headline-md text-headline-md border border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 bg-surface transition-all outline-none" maxlength="1" placeholder="·" type="text"/>
+<input class="w-full h-touch-target text-center font-headline-md text-headline-md border border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 bg-surface transition-all outline-none" maxlength="1" placeholder="·" type="text"/>
+<input class="w-full h-touch-target text-center font-headline-md text-headline-md border border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 bg-surface transition-all outline-none" maxlength="1" placeholder="·" type="text"/>
+<input class="w-full h-touch-target text-center font-headline-md text-headline-md border border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 bg-surface transition-all outline-none" maxlength="1" placeholder="·" type="text"/>
+</div>
+<!-- Action Button -->
+<button class="w-full h-touch-target bg-primary text-on-primary font-label-md text-label-md rounded-full shadow-md active:scale-95 transition-transform flex items-center justify-center gap-base mb-md">
+                    Verify &amp; Login
+                    <span class="material-symbols-outlined" style="font-size: 20px;">login</span>
+</button>
+<!-- Footer Actions -->
+<div class="flex flex-col items-center gap-sm">
+<p class="font-label-sm text-label-sm text-on-surface-variant">
+                        Didn't receive the code? 
+                        <a class="text-primary font-bold hover:underline" href="#">Resend OTP</a>
+</p>
+<a class="font-label-sm text-label-sm text-outline flex items-center gap-xs hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-size: 16px;">arrow_back</span>
+                        Back to Login
+                    </a>
+</div>
+</div>
+<!-- Bento-style Support Card -->
+<div class="mt-lg grid grid-cols-1 gap-gutter">
+<div class="bg-surface-container p-md rounded-xl flex items-center gap-md border border-white">
+<div class="w-12 h-12 rounded-lg bg-secondary-container flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined">support_agent</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Need help with login?</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Contact our system administrator</p>
+</div>
+<button class="ml-auto w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">call</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Meta -->
+<footer class="p-margin-mobile text-center">
+<p class="font-label-sm text-label-sm text-outline">FixIt Pro v2.4.0 • Enterprise Repair Ecosystem</p>
+</footer>
+</body></html>

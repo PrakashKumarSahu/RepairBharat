@@ -20,6 +20,11 @@ def create_user_profile(sender, instance, created, **kwargs):
 
     elif instance.role == CustomUser.Roles.TECHNICIAN:
         TechnicianProfile.objects.create(user=instance)
+        try:
+            from providers.models import Technician as NewTechnician
+            NewTechnician.objects.create(user=instance)
+        except Exception:
+            pass
 
     elif instance.role == CustomUser.Roles.SHOP_OWNER:
         ShopOwnerProfile.objects.create(

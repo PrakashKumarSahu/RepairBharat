@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Inventory Management - FixIt Pro</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary": "#ffffff",
+                    "outline": "#757684",
+                    "inverse-on-surface": "#eaf1ff",
+                    "on-secondary-fixed": "#00210a",
+                    "on-tertiary-container": "#ffa85d",
+                    "surface-tint": "#3755c3",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-container": "#a8b8ff",
+                    "secondary-fixed": "#95f8a7",
+                    "secondary-container": "#92f5a4",
+                    "surface-dim": "#cbdbf5",
+                    "on-surface": "#0b1c30",
+                    "surface-container": "#e5eeff",
+                    "on-tertiary": "#ffffff",
+                    "tertiary": "#532a00",
+                    "on-error-container": "#93000a",
+                    "secondary": "#006d30",
+                    "outline-variant": "#c4c5d5",
+                    "on-surface-variant": "#444653",
+                    "tertiary-container": "#743d00",
+                    "surface": "#f8f9ff",
+                    "primary-fixed": "#dde1ff",
+                    "inverse-surface": "#213145",
+                    "primary": "#00288e",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-error": "#ffffff",
+                    "surface-bright": "#f8f9ff",
+                    "on-primary-fixed": "#001453",
+                    "error": "#ba1a1a",
+                    "on-background": "#0b1c30",
+                    "tertiary-fixed-dim": "#ffb77d",
+                    "surface-container-high": "#dce9ff",
+                    "on-primary-fixed-variant": "#173bab",
+                    "on-tertiary-fixed": "#2f1500",
+                    "primary-container": "#1e40af",
+                    "on-secondary-container": "#007233",
+                    "surface-container-low": "#eff4ff",
+                    "surface-variant": "#d3e4fe",
+                    "primary-fixed-dim": "#b8c4ff",
+                    "error-container": "#ffdad6",
+                    "on-secondary-fixed-variant": "#005323",
+                    "tertiary-fixed": "#ffdcc3",
+                    "inverse-primary": "#b8c4ff",
+                    "on-primary": "#ffffff",
+                    "secondary-fixed-dim": "#79db8d",
+                    "on-tertiary-fixed-variant": "#6e3900",
+                    "background": "#f8f9ff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xs": "4px",
+                    "gutter": "16px",
+                    "xl": "48px",
+                    "margin-desktop": "40px",
+                    "md": "20px",
+                    "touch-target": "48px",
+                    "margin-mobile": "16px",
+                    "lg": "32px",
+                    "base": "8px",
+                    "sm": "12px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "label-sm": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "headline-xl": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "label-md": ["Inter"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-xl": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9ff;
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-surface shadow-sm flex justify-between items-center px-margin-mobile h-touch-target border-b border-outline-variant/30">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-primary cursor-pointer" data-icon="menu">menu</span>
+<h1 class="font-headline-lg text-headline-lg font-bold text-primary">FixIt Pro</h1>
+</div>
+<div class="flex items-center gap-md">
+<div class="flex items-center gap-xs text-outline group cursor-pointer" title="All changes synced">
+<span class="material-symbols-outlined text-[18px]" data-icon="cloud_done">cloud_done</span>
+<span class="font-label-sm hidden sm:inline">Synced</span>
+</div>
+<div class="h-8 w-8 rounded-full overflow-hidden bg-surface-variant ring-1 ring-outline-variant/50">
+<img alt="User Profile" class="h-full w-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxHgt4TPPNEcZtsZTLxNKj7-Xz68aDo8ub4q5MPEOKZrtqLOytGmTcTl0MgQcbl9LJpwNrZUQil-QPcDXiyVDucv7hbMb35347BQj4stycblMDzazmgSmvqt2s3YTU8j_W9sADpj9bQCWOWpcX5ESmf_61xfIYb1lji0ifXqBMBZWGgacgvFWCrfA7-U74OTmgLMik6hEG0iB1Q_IUC_okFUiUjcvEvLJx_9hW_QU69uW_oa3ZgTazHeF7-jldXw_lTQzDgifASJlE"/>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<div class="flex min-h-screen pt-touch-target pb-xl">
+<!-- NavigationDrawer (Hidden on mobile) -->
+<aside class="hidden md:flex flex-col h-screen sticky top-touch-target w-72 p-sm bg-surface-container-low shadow-md border-r border-outline-variant">
+<div class="flex items-center gap-sm p-base mb-lg">
+<div class="h-12 w-12 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+</div>
+<div>
+<p class="font-headline-md text-headline-md text-primary">Workshop Admin</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Master Station</p>
+</div>
+</div>
+<nav class="space-y-xs">
+<a class="flex items-center gap-md p-sm text-on-surface-variant hover:bg-surface-container-highest transition-all duration-200 ease-in-out rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-md text-body-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-md p-sm text-on-surface-variant hover:bg-surface-container-highest transition-all duration-200 ease-in-out rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="handyman">handyman</span>
+<span class="font-body-md text-body-md">Repair Orders</span>
+</a>
+<a class="flex items-center gap-md p-sm bg-secondary-container text-on-secondary-container font-bold rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="precision_manufacturing">precision_manufacturing</span>
+<span class="font-body-md text-body-md">Parts Inventory</span>
+</a>
+<a class="flex items-center gap-md p-sm text-on-surface-variant hover:bg-surface-container-highest transition-all duration-200 ease-in-out rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-body-md text-body-md">Customers</span>
+</a>
+<a class="flex items-center gap-md p-sm text-on-surface-variant hover:bg-surface-container-highest transition-all duration-200 ease-in-out rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-md text-body-md">Settings</span>
+</a>
+</nav>
+<div class="mt-auto p-base text-center">
+<span class="font-label-sm text-label-sm text-outline">v2.4.0</span>
+</div>
+</aside>
+<!-- Canvas -->
+<main class="flex-1 p-margin-mobile md:p-margin-desktop bg-background overflow-x-hidden">
+<header class="mb-lg flex flex-col md:flex-row md:items-end justify-between gap-md">
+<div>
+<h2 class="font-headline-xl text-headline-xl text-on-surface mb-xs">Inventory Management</h2>
+<div class="flex items-center gap-sm">
+<p class="font-body-md text-body-md text-on-surface-variant">Monitor, track, and reorder critical repair components.</p>
+<div class="flex items-center gap-xs px-2 py-0.5 rounded bg-surface-container text-outline text-[12px] font-medium" title="3 stock updates waiting to sync">
+<span class="material-symbols-outlined text-[14px] animate-pulse" data-icon="sync">sync</span>
+                        3 Pending
+                    </div>
+</div>
+</div>
+<div class="flex gap-sm">
+<button class="flex items-center justify-center gap-xs px-md h-touch-target bg-surface border border-outline-variant rounded-xl font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high transition-colors active:bg-primary-container/20">
+<span class="material-symbols-outlined" data-icon="checklist">checklist</span>
+                    Bulk Actions
+                </button>
+</div>
+</header>
+<!-- Search & Filter -->
+<div class="flex flex-col md:flex-row gap-md items-center mb-lg">
+<div class="relative w-full md:max-w-md">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full pl-12 pr-4 h-touch-target rounded-xl border border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all placeholder:text-outline" placeholder="Search parts, ICs, or tools..." type="text"/>
+</div>
+<div class="flex gap-sm w-full md:w-auto">
+<button class="flex-1 md:flex-none flex items-center justify-center gap-xs px-md h-touch-target bg-surface border border-outline-variant rounded-xl font-label-md text-label-md text-on-surface-variant hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" data-icon="filter_list">filter_list</span>
+                    Filter
+                </button>
+<button class="flex-1 md:flex-none flex items-center justify-center gap-xs px-md h-touch-target bg-primary text-on-primary rounded-xl font-label-md text-label-md hover:opacity-90 active:scale-95 transition-all shadow-sm">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+                    Add New Part
+                </button>
+</div>
+</div><div class="flex flex-wrap items-center gap-sm mb-lg">
+<span class="font-label-md text-on-surface-variant">Frequently Used:</span>
+<div class="flex flex-wrap gap-xs">
+<button class="px-sm py-1 bg-surface-container-high text-on-primary-fixed-variant rounded-full text-label-sm hover:bg-primary-fixed transition-colors border border-outline-variant/30 flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">history</span>
+      iPhone 13 Screen
+    </button>
+<button class="px-sm py-1 bg-surface-container-high text-on-primary-fixed-variant rounded-full text-label-sm hover:bg-primary-fixed transition-colors border border-outline-variant/30 flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">history</span>
+      B-7000 Glue
+    </button>
+<button class="px-sm py-1 bg-surface-container-high text-on-primary-fixed-variant rounded-full text-label-sm hover:bg-primary-fixed transition-colors border border-outline-variant/30 flex items-center gap-xs">
+<span class="material-symbols-outlined text-[16px]">history</span>
+      Type-C Port
+    </button>
+</div>
+</div>
+<!-- Tracking Stats -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-md mb-lg">
+<div class="bg-surface p-md rounded-xl shadow-sm border-l-4 border-primary">
+<p class="font-label-md text-label-md text-on-surface-variant mb-xs">Total SKU Count</p>
+<div class="flex items-baseline gap-sm">
+<p class="font-headline-lg text-headline-lg text-on-surface font-bold">1,248 Items</p>
+</div>
+</div>
+<div class="bg-surface p-md rounded-xl shadow-sm border-l-4 border-error">
+<p class="font-label-md text-label-md text-on-surface-variant mb-xs">Critical Stock Alerts</p>
+<div class="flex items-center gap-sm">
+<p class="font-headline-lg text-headline-lg text-error font-bold">12 Items Low</p>
+<span class="px-2 py-0.5 bg-error-container text-on-error-container rounded text-[10px] font-bold uppercase tracking-wider">Priority</span>
+</div>
+</div>
+<div class="bg-surface p-md rounded-xl shadow-sm border-l-4 border-secondary">
+<p class="font-label-md text-label-md text-on-surface-variant mb-xs">Usage (Last 30 Days)</p>
+<p class="font-headline-lg text-headline-lg text-secondary font-bold">4.2k Parts</p>
+</div>
+</div>
+<!-- Inventory Table -->
+<div class="bg-surface rounded-xl shadow-sm overflow-hidden border border-outline-variant">
+<!-- Bulk Action Mode Bar (Mocked as visible when toggled/selected) -->
+<div class="flex items-center justify-between px-md py-sm bg-primary-container text-on-primary-container border-b border-outline-variant">
+<div class="flex items-center gap-md">
+<span class="font-label-md">3 items selected</span>
+<div class="flex gap-sm">
+<button class="flex items-center gap-xs px-sm py-1 bg-surface-container-highest/50 hover:bg-surface-container-highest rounded-lg text-label-sm transition-colors border border-primary/10">
+<span class="material-symbols-outlined text-[18px]" data-icon="edit">edit</span> Edit Stock
+</button>
+<button class="flex items-center gap-xs px-sm py-1 bg-surface-container-highest/50 hover:bg-surface-container-highest rounded-lg text-label-sm transition-colors border border-primary/10">
+<span class="material-symbols-outlined text-[18px]" data-icon="shopping_cart_checkout">shopping_cart_checkout</span> Restock
+</button>
+</div>
+</div>
+<button class="material-symbols-outlined hover:bg-primary/10 p-1 rounded-full" data-icon="close">close</button>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="p-md w-12">
+<input checked="" class="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Part Name &amp; Category</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Stock Status</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Qty Available</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Usage Trace</th>
+<th class="p-md font-label-md text-label-md text-on-surface-variant uppercase tracking-wider"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1: Low Stock (Critical) -->
+<tr class="hover:bg-surface-container transition-colors group bg-primary/5">
+<td class="p-md">
+<input checked="" class="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</td>
+<td class="p-md">
+<div class="flex items-center gap-md">
+<div class="h-12 w-12 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="memory">memory</span>
+</div>
+<div>
+<div class="flex items-center gap-xs">
+<p class="font-label-md text-label-md text-on-surface">PMIC IC Chips (iPhone 13)</p>
+<span class="material-symbols-outlined text-[16px] text-outline opacity-0 group-hover:opacity-100 transition-opacity" data-icon="sync_problem" title="Pending update">sync_problem</span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Electronics / Integrated Circuits</p>
+</div>
+</div>
+</td>
+<td class="p-md">
+<div class="flex flex-col gap-xs">
+<span class="inline-flex items-center w-fit px-sm py-1 rounded-full bg-error text-on-error text-label-sm font-label-sm gap-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="error">error</span>
+                                        Critical Stock
+                                    </span>
+<span class="text-[10px] text-error font-bold uppercase ml-1 tracking-tighter">Action Required</span>
+</div>
+</td>
+<td class="p-md">
+<p class="font-body-md text-body-md text-on-surface font-bold">5 units</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Min: 20 units</p>
+</td>
+<td class="p-md">
+<p class="font-label-sm text-label-sm text-on-surface">84 used this week</p>
+<div class="w-24 h-1 bg-outline-variant rounded-full mt-1 overflow-hidden">
+<div class="h-full bg-error w-3/4"></div>
+</div>
+</td>
+<td class="p-md text-right">
+<button class="p-xs hover:bg-surface-container-highest rounded-full transition-colors">
+<span class="material-symbols-outlined text-outline" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 2: In Stock -->
+<tr class="hover:bg-surface-container transition-colors">
+<td class="p-md">
+<input class="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</td>
+<td class="p-md">
+<div class="flex items-center gap-md">
+<div class="h-12 w-12 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="bolt">bolt</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">10uF Capacitors (SMD 0805)</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Passives / Capacitors</p>
+</div>
+</div>
+</td>
+<td class="p-md">
+<span class="inline-flex items-center px-sm py-1 rounded-full bg-secondary-container text-on-secondary-container text-label-sm font-label-sm gap-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="check_circle">check_circle</span>
+                                    In Stock
+                                </span>
+</td>
+<td class="p-md">
+<p class="font-body-md text-body-md text-on-surface font-bold">450 units</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Min: 100 units</p>
+</td>
+<td class="p-md">
+<p class="font-label-sm text-label-sm text-on-surface">22 used this week</p>
+<div class="w-24 h-1 bg-outline-variant rounded-full mt-1 overflow-hidden">
+<div class="h-full bg-secondary w-1/4"></div>
+</div>
+</td>
+<td class="p-md text-right">
+<button class="p-xs hover:bg-surface-container-highest rounded-full transition-colors">
+<span class="material-symbols-outlined text-outline" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<!-- Row 3: Warning Stock -->
+<tr class="hover:bg-surface-container transition-colors bg-primary/5">
+<td class="p-md">
+<input checked="" class="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4" type="checkbox"/>
+</td>
+<td class="p-md">
+<div class="flex items-center gap-md">
+<div class="h-12 w-12 rounded-lg bg-surface-container-highest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="science">science</span>
+</div>
+<div>
+<p class="font-label-md text-label-md text-on-surface">Flux Syringes (Amtech NC-559)</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Consumables / Soldering</p>
+</div>
+</div>
+</td>
+<td class="p-md">
+<span class="inline-flex items-center px-sm py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed-variant text-label-sm font-label-sm gap-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="warning">warning</span>
+                                    Low Stock
+                                </span>
+</td>
+<td class="p-md">
+<p class="font-body-md text-body-md text-on-surface font-bold">18 units</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Min: 5 units</p>
+</td>
+<td class="p-md">
+<p class="font-label-sm text-label-sm text-on-surface">3 used this week</p>
+<div class="w-24 h-1 bg-outline-variant rounded-full mt-1 overflow-hidden">
+<div class="h-full bg-primary w-1/5"></div>
+</div>
+</td>
+<td class="p-md text-right">
+<button class="p-xs hover:bg-surface-container-highest rounded-full transition-colors">
+<span class="material-symbols-outlined text-outline" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="p-md flex items-center justify-between bg-surface-container-low border-t border-outline-variant">
+<p class="font-label-sm text-label-sm text-on-surface-variant">Showing 3 of 1,248 items</p>
+<div class="flex gap-xs">
+<button class="px-md py-1 border border-outline-variant rounded-lg font-label-sm text-label-sm hover:bg-surface-container-high transition-colors">Previous</button>
+<button class="px-md py-1 bg-primary text-on-primary rounded-lg font-label-sm text-label-sm hover:opacity-90 transition-colors">Next</button>
+</div>
+</div>
+</div>
+<!-- Quick Restock Section -->
+<div class="mt-lg grid grid-cols-1 lg:grid-cols-2 gap-lg">
+<div class="bg-surface p-lg rounded-xl shadow-sm border border-outline-variant">
+<div class="flex items-center justify-between mb-md">
+<h3 class="font-headline-md text-headline-md text-on-surface font-bold">Quick Restock</h3>
+<button class="text-primary text-label-md font-bold flex items-center gap-xs hover:underline decoration-primary">
+                        View All <span class="material-symbols-outlined text-[18px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<div class="space-y-md">
+<div class="flex items-center justify-between p-sm border border-outline-variant rounded-xl bg-surface-container-low hover:border-primary/50 transition-colors cursor-pointer group">
+<div class="flex items-center gap-md">
+<img alt="PMIC" class="rounded-md h-12 w-12 object-cover border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBk4sZXrkNtpXPu8gFgfjJ89ed599h1tHwxi_BnxLSCDvCzHLi6aH3-u3VfbMTxbjqIYkyc_v0EkEUVgL-pxJ_MYOc-UWycJDD6__T1fymvEDnIKwWmh1AnNF88GgMq7It-QCS_GWQDNrxkaxLrAfp0ODEa6_9-w0O02PnzzLqDJsuuKZi419CKiyQGO00PuXRws5WJnz5LzIdV5UpwX0x3baa2qiYnKAAjHtE6if6686T2EDVzvBU1VwDXN8tKJzefEWuZirjvvTYB"/>
+<div>
+<p class="font-label-md text-label-md text-on-surface font-semibold">PMIC iPhone 13</p>
+<p class="font-label-sm text-label-sm text-error font-bold">Current: 5 | Target: 50</p>
+</div>
+</div>
+<button class="px-md py-2 bg-primary text-on-primary rounded-lg font-label-sm text-label-sm flex items-center gap-xs hover:bg-primary/90 transition-all">
+<span class="material-symbols-outlined text-[16px]" data-icon="shopping_cart">shopping_cart</span>
+                            Order
+                        </button>
+</div>
+<div class="flex items-center justify-between p-sm border border-outline-variant rounded-xl bg-surface-container-low hover:border-primary/50 transition-colors cursor-pointer group">
+<div class="flex items-center gap-md">
+<img alt="Display" class="rounded-md h-12 w-12 object-cover border border-outline-variant" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC67KzS57DHAkqxi65RWI6Ytb9CGuBzDvEJ7PC7IlYvam1MeN6toVBtFw3L23otOBOU9qUP9X-MLLAZUC-_RgpIQxWhpcjaiUxxxWrL7wuzFzV8CUJwQv9paO92V8Wef0DjMvd0gx_sOD3BJ7qUhrw5WZCkKdW66fcOxCO6gFmudcscPOKVAWMW0UgMGeiMqXbuhLZ4Ipn0hk3TCIyA3jNWy6O47x4ZKaI_UQJ1TLnXYW90xfcWTl2yD_-W6WW32tvBhDOZnfJYSYgv"/>
+<div>
+<p class="font-label-md text-label-md text-on-surface font-semibold">LCD Assembly (S21)</p>
+<p class="font-label-sm text-label-sm text-tertiary-container font-bold">Current: 2 | Target: 10</p>
+</div>
+</div>
+<button class="px-md py-2 bg-primary text-on-primary rounded-lg font-label-sm text-label-sm flex items-center gap-xs hover:bg-primary/90 transition-all">
+<span class="material-symbols-outlined text-[16px]" data-icon="shopping_cart">shopping_cart</span>
+                            Order
+                        </button>
+</div>
+</div>
+</div>
+<div class="relative rounded-xl overflow-hidden shadow-sm group min-h-[250px]">
+<img class="w-full h-full object-cover" data-alt="A clean, organized electronics workshop stockroom featuring high-resolution shelves filled with labeled plastic bins containing microchips and tiny capacitors." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBXp8wttZqoV4GD604mMHCBNUqHnCG26mBz7_3e6ryDL1wa4qNwbW8An6-iFL8aFcxxtbsbtLGGkrIBaDj6kU4MgcrF8a_RQrAZz_YSIbsg2BAnUGb9UZjt4cp5E8NwcTcvCcCrdRk4g8z-z_KkthJazpr5sThDN1G1egvrE1f1KfQEDDbWts8PX2HxuZpNj5n2A3Hj0j_UYhmjq-veHWENqfsdKCP54mdteq7z8P9qpw-Q4884SXWANVy5ITk9wVUnT6vKa2BlEnvd"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/95 via-primary/40 to-transparent flex flex-col justify-end p-lg">
+<p class="font-headline-md text-headline-md text-on-primary font-bold">Inventory Audit 2023</p>
+<p class="font-body-md text-body-md text-on-primary/90 mb-md">Last physical audit completed 4 days ago by Admin.</p>
+<button class="w-fit px-md py-2 bg-on-primary text-primary rounded-lg font-label-md text-label-md font-bold flex items-center gap-xs hover:bg-white transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="description">description</span>
+                        View Report
+                    </button>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 bg-surface shadow-lg rounded-t-xl flex justify-around items-center h-xl px-gutter border-t border-outline-variant">
+<a class="flex flex-col items-center justify-center text-on-surface-variant py-2" href="#">
+<span class="material-symbols-outlined" data-icon="build">build</span>
+<span class="font-label-sm text-label-sm">Jobs</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-4 py-1" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-label-sm text-label-sm">Inventory</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant py-2" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-label-sm text-label-sm">Analytics</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant py-2" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<!-- FAB (Contextual for Inventory) -->
+<button class="fixed bottom-20 right-6 md:bottom-8 md:right-8 h-14 w-14 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center active:scale-90 transition-all z-40 hover:bg-primary-container border-2 border-on-primary/20">
+<span class="material-symbols-outlined text-[28px]" data-icon="add_box">add_box</span>
+</button>
+</body></html>
