@@ -67,6 +67,7 @@ class RepairOrderSerializer(serializers.ModelSerializer):
             "priority",
             "estimated_cost",
             "advance_paid",
+            "device_image",
             "created_at",
             "updated_at",
             "history",

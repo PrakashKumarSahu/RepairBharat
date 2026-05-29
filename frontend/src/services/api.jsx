@@ -260,3 +260,15 @@ export const updateJoinRequest = async (requestId, status) => {
     const response = await axios.patch(url, { request_id: requestId, status: status }, { headers: getAuthHeaders() });
     return response.data;
 };
+
+export const updateTechnician = async (techId, data) => {
+    const url = `${getApiUrl()}/api/providers/technicians/${techId}/`;
+    const response = await axios.patch(url, data, { headers: getAuthHeaders() });
+    return response.data;
+};
+
+export const fetchPublicTicket = async (ticketNumber) => {
+    const url = `${getApiUrl()}/api/repairs/public-track/${ticketNumber}/`;
+    const response = await axios.get(url);
+    return response.data;
+};

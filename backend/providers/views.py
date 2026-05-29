@@ -125,3 +125,21 @@ class JoinRequestListCreateUpdateView(generics.ListCreateAPIView, generics.Updat
 
         serializer = self.get_serializer(join_request)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class TechnicianDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Technician.objects.all()
+    serializer_class = TechnicianSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        try:
+            from accounts.models import TechnicianProfile
+            legacy_profile = getattr(instance.user, "technician_profile", None)
+            if legacy_profile:
+                legacy_profile.is_verified = instance.is_verified
+                legacy_profile.shop = instance.shop
+                legacy_profile.save()
+        except Exception:
+            pass

@@ -18,7 +18,15 @@ class RepairOrderListCreateView(generics.ListCreateAPIView):
             return RepairOrder.objects.filter(customer=user).order_by("-created_at")
         elif user.role == "technician":
             tech = Technician.objects.filter(user=user).first()
-            return RepairOrder.objects.filter(assigned_technician=tech).order_by("-created_at")
+            if tech:
+                from django.db.models import Q
+                filters = Q(assigned_technician=tech)
+                if tech.branch:
+                    filters |= Q(branch=tech.branch)
+                elif tech.shop:
+                    filters |= Q(branch__organization__owner=tech.shop)
+                return RepairOrder.objects.filter(filters).order_by("-created_at")
+            return RepairOrder.objects.none()
         elif user.role == "shop_owner":
             return RepairOrder.objects.filter(branch__organization__owner__user=user).order_by("-created_at")
         return RepairOrder.objects.none()
@@ -85,11 +93,22 @@ class RepairOrderListCreateView(generics.ListCreateAPIView):
                 pass
 
         branch_id = request.data.get("branch")
+        if not branch_id or branch_id == "":
+            return Response({"detail": "Branch field is required."}, status=status.HTTP_400_BAD_REQUEST)
+
         issue = request.data.get("issue_reported", "System diagnosis request")
         diag = request.data.get("diagnostics_notes", "")
         priority = request.data.get("priority", "medium")
-        cost = request.data.get("estimated_cost", "0.00")
-        advance = request.data.get("advance_paid", "0.00")
+        
+        cost = request.data.get("estimated_cost")
+        if not cost or cost == "":
+            cost = "0.00"
+
+        advance = request.data.get("advance_paid")
+        if not advance or advance == "":
+            advance = "0.00"
+
+        device_image = request.data.get("device_image", "")
 
         order = RepairOrder.objects.create(
             branch_id=branch_id,
@@ -101,7 +120,8 @@ class RepairOrderListCreateView(generics.ListCreateAPIView):
             status=status_obj,
             priority=priority,
             estimated_cost=cost,
-            advance_paid=advance
+            advance_paid=advance,
+            device_image=device_image
         )
 
         # Log initial stage
@@ -145,3 +165,10 @@ class RepairOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
                 notes=stage_notes or f"Repair migrated to {new_status.name}",
                 updated_by=self.request.user
             )
+
+
+class PublicRepairOrderTrackView(generics.RetrieveAPIView):
+    queryset = RepairOrder.objects.all()
+    serializer_class = RepairOrderSerializer
+    permission_classes = [permissions.AllowAny]
+    lookup_field = "ticket_number"

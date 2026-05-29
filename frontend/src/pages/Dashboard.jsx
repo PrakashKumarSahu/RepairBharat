@@ -18,12 +18,17 @@ import {
     fetchShops,
     fetchJoinRequests,
     createJoinRequest,
-    updateJoinRequest
+    updateJoinRequest,
+    updateTechnician
 } from "../services/api";
 
 export default function Dashboard() {
     const { user, setUser } = useUserContext();
     const navigate = useNavigate();
+
+    // ============================================================================
+    // ─── 1. CORE CLIENT STATE & BINDINGS ────────────────────────────────────────
+    // ============================================================================
 
     // App Loading and core datasets
     const [loading, setLoading] = useState(true);
@@ -58,7 +63,10 @@ export default function Dashboard() {
         city: "Mumbai",
         address: "",
         phone: "",
-        specialties: "Mobiles, Laptops, Tablets"
+        specialties: "Mobiles, Laptops, Tablets",
+        latitude: 19.0760,
+        longitude: 72.8777,
+        gst_number: ""
     });
 
     // Walk-in Ticket Creation state
@@ -73,12 +81,14 @@ export default function Dashboard() {
         issue_reported: "",
         priority: "medium",
         estimated_cost: "0.00",
-        advance_paid: "0.00"
+        advance_paid: "0.00",
+        device_image: ""
     });
 
     // UI Panel States
     const [activeTab, setActiveTab] = useState("repairs"); // customer: repairs, workshops, history; owner: erp, inventory; tech: queue, diagnostics
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [selectedWorkloadBranch, setSelectedWorkloadBranch] = useState("");
 
     // Filtering states for Customer Branch Discovery
     const [searchQuery, setSearchQuery] = useState("");
@@ -98,8 +108,14 @@ export default function Dashboard() {
         device_model: "",
         device_serial: "",
         issue_reported: "",
-        priority: "medium"
+        priority: "medium",
+        device_image: ""
     });
+
+    // Success / QR Code modal states
+    const [showSuccessQrModal, setShowSuccessQrModal] = useState(false);
+    const [successTicketNumber, setSuccessTicketNumber] = useState("");
+    const [successDeviceName, setSuccessDeviceName] = useState("");
 
     // Shop Owner Spares / Inventory Add
     const [showAddInventory, setShowAddInventory] = useState(false);
@@ -113,7 +129,8 @@ export default function Dashboard() {
         purchase_price: "",
         selling_price: "",
         hsn_code: "8517",
-        gst_rate: "18.00"
+        gst_rate: "18.00",
+        image: ""
     });
 
     // Shop Owner GST Billing Modal
@@ -126,12 +143,41 @@ export default function Dashboard() {
     const [invoiceBillingAddress, setInvoiceBillingAddress] = useState("");
     const [showInvoicePreviewModal, setShowInvoicePreviewModal] = useState(false);
     const [selectedPreviewInvoice, setSelectedPreviewInvoice] = useState(null);
+    const [showManualInvoiceModal, setShowManualInvoiceModal] = useState(false);
+    const [manualInvoiceForm, setManualInvoiceForm] = useState({
+        shop_gstin: "27AAAAA1111A1Z1",
+        customer_name: "",
+        customer_phone: "",
+        customer_gstin: "",
+        billing_address: "",
+        labor_charges: "0.00",
+        payment_method: "upi",
+        payment_status: "paid",
+        items: []
+    });
+
+    // Location services state
+    const [userLat, setUserLat] = useState(19.0760);
+    const [userLng, setUserLng] = useState(72.8777);
+    const [locationMethod, setLocationMethod] = useState("default");
+    const [locationProviderInfo, setLocationProviderInfo] = useState("Default Initial Center (Mumbai Hub)");
 
     // Technician Diagnostics Workstation
     const [selectedTicket, setSelectedTicket] = useState(null);
     const [diagNotes, setDiagNotes] = useState("");
     const [repairStatus, setRepairStatus] = useState("diagnosing");
     const [techSelectedSpares, setTechSelectedSpares] = useState([]);
+
+    // Auto-close profile menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (!e.target.closest(".profile-menu-container")) {
+                setShowProfileMenu(false);
+            }
+        };
+        document.addEventListener("click", handleClickOutside);
+        return () => document.removeEventListener("click", handleClickOutside);
+    }, []);
 
     useEffect(() => {
         if (!user) {
@@ -146,6 +192,29 @@ export default function Dashboard() {
             else setActiveTab("repairs");
 
             loadDashboardData();
+
+            // Establish real-time telemetry polling (10s auto-refresh)
+            const intervalId = setInterval(() => {
+                // background refresh without full screen loaders
+                (async () => {
+                    try {
+                        const ticketData = await fetchTickets();
+                        setTickets(ticketData);
+                        if (user?.role === "shop_owner" || user?.role === "technician") {
+                            const invData = await fetchInventory();
+                            setInventory(invData);
+                            const invList = await fetchInvoices();
+                            setInvoices(invList);
+                            const reqData = await fetchJoinRequests();
+                            setJoinRequests(reqData);
+                        }
+                    } catch (e) {
+                        console.log("Background real-time sync heartbeat standard check.");
+                    }
+                })();
+            }, 10000);
+
+            return () => clearInterval(intervalId);
         }
     }, [user]);
 
@@ -168,6 +237,9 @@ export default function Dashboard() {
         }
     }, [selectedRepairType, cityFilter, specialtyFilter, activeTab]);
 
+    // ============================================================================
+    // ─── 2. DATA LOADERS & FRANCHISE CONTEXT EFFECTS ────────────────────────────
+    // ============================================================================
     const loadDashboardData = async () => {
         setLoading(true);
         try {
@@ -215,6 +287,32 @@ export default function Dashboard() {
         }
     };
 
+    // ============================================================================
+    // ─── 3. WORKSTATION TELEMETRY & GPS CONTROLLERS ─────────────────────────────
+    // ============================================================================
+    const handleAutoFetchLocation = () => {
+        if (navigator.geolocation) {
+            setLocationProviderInfo("Fetching coordinates from HTML5 Device Geolocation API...");
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setUserLat(position.coords.latitude);
+                    setUserLng(position.coords.longitude);
+                    setLocationMethod("device_gps");
+                    setLocationProviderInfo("W3C Device GPS Telemetry (HTML5 Location Service API)");
+                    toast.success("Device telemetry coordinates fetched successfully!");
+                },
+                (error) => {
+                    console.error("GPS fetch error", error);
+                    toast.error("GPS blocked or unavailable. Falling back to manual search.");
+                    setLocationProviderInfo("Fallback Directory Engine (Standard Core Coordinates)");
+                },
+                { enableHighAccuracy: true, timeout: 5000 }
+            );
+        } else {
+            toast.error("Geolocation API not supported by browser.");
+        }
+    };
+
     const handleLogout = () => {
         localStorage.removeItem("token");
         setUser(null);
@@ -231,6 +329,9 @@ export default function Dashboard() {
         return matchesSearch && matchesCity && matchesSpecialty;
     });
 
+    // ============================================================================
+    // ─── 4. REPAIR BOOKINGS & BRANCH MANAGEMENT HANDLERS ────────────────────────
+    // ============================================================================
     // Customer: Submit secure repair booking ticket
     const handleCreateTicketSubmit = async (e) => {
         e.preventDefault();
@@ -247,19 +348,24 @@ export default function Dashboard() {
                 device_model: bookingForm.device_model,
                 device_serial: bookingForm.device_serial || "N/A",
                 issue_reported: bookingForm.issue_reported,
-                priority: bookingForm.priority
+                priority: bookingForm.priority,
+                device_image: bookingForm.device_image
             };
 
-            await createTicket(ticketPayload);
+            const res = await createTicket(ticketPayload);
             toast.success("Secure repair booking submitted successfully!");
             setShowBookingModal(false);
+            setSuccessTicketNumber(res.ticket_number);
+            setSuccessDeviceName(`${res.device_brand || bookingForm.device_brand} ${res.device_model || bookingForm.device_model}`);
+            setShowSuccessQrModal(true);
             setBookingForm({
                 device_category: "Smartphone",
                 device_brand: "",
                 device_model: "",
                 device_serial: "",
                 issue_reported: "",
-                priority: "medium"
+                priority: "medium",
+                device_image: ""
             });
             // Refresh
             const freshTickets = await fetchTickets();
@@ -288,7 +394,10 @@ export default function Dashboard() {
                 city: "Mumbai",
                 address: "",
                 phone: "",
-                specialties: "Mobiles, Laptops, Tablets"
+                specialties: "Mobiles, Laptops, Tablets",
+                latitude: 19.0760,
+                longitude: 72.8777,
+                gst_number: ""
             });
             loadDashboardData();
         } catch (error) {
@@ -316,7 +425,8 @@ export default function Dashboard() {
                 issue_reported: walkinForm.issue_reported,
                 priority: walkinForm.priority,
                 estimated_cost: walkinForm.estimated_cost,
-                advance_paid: walkinForm.advance_paid
+                advance_paid: walkinForm.advance_paid,
+                device_image: walkinForm.device_image
             };
 
             // If technician, auto-assign this job to their own technician profile ID
@@ -327,9 +437,12 @@ export default function Dashboard() {
                 }
             }
 
-            await createTicket(payload);
+            const res = await createTicket(payload);
             toast.success("Walk-in repair order created successfully!");
             setShowWalkinModal(false);
+            setSuccessTicketNumber(res.ticket_number);
+            setSuccessDeviceName(`${res.device_brand || walkinForm.device_brand} ${res.device_model || walkinForm.device_model}`);
+            setShowSuccessQrModal(true);
             setWalkinForm({
                 customer: "",
                 branch: "",
@@ -340,7 +453,8 @@ export default function Dashboard() {
                 issue_reported: "",
                 priority: "medium",
                 estimated_cost: "0.00",
-                advance_paid: "0.00"
+                advance_paid: "0.00",
+                device_image: ""
             });
             loadDashboardData();
         } catch (error) {
@@ -349,10 +463,13 @@ export default function Dashboard() {
         }
     };
 
+    // ============================================================================
+    // ─── 5. STAFF OVERWATCH & INVOICING HANDLERS ────────────────────────────────
+    // ============================================================================
     // Shop Owner: Assign technician to repair order
     const handleAssignTechnician = async (ticketId, techId) => {
         try {
-            await updateTicket(ticketId, { assigned_technician: techId });
+            await updateTicket(ticketId, { assigned_technician: techId === "" ? null : techId });
             toast.success("Technician assigned to workstation successfully.");
             const freshTickets = await fetchTickets();
             setTickets(freshTickets);
@@ -376,18 +493,25 @@ export default function Dashboard() {
 
         try {
             const stageObj = stages.find(s => s.code === stageNotesCode);
-            await updateTicket(stageNotesTicketId, { 
+            const res = await updateTicket(stageNotesTicketId, { 
                 status_code: stageNotesCode,
                 stage_notes: stageNotesInput || `Repair transitioned to ${stageObj?.name || 'next stage'}`
             });
             toast.success("Pipeline milestone updated with transition notes.");
             setShowStageNotesModal(false);
             setStageNotesTicketId(null);
-            setStageNotesCode("");
             setStageNotesInput("");
-            
-            const freshTickets = await fetchTickets();
-            setTickets(freshTickets);
+
+            // Synchronize all modules in real time
+            await loadDashboardData();
+
+            // Prompt shop owner to compile manual invoice if transition is to "ready"
+            if (stageNotesCode === "ready") {
+                setActiveInvoiceTicket(res); 
+                setInvoiceBillingAddress(`${res.customer_username || 'Client'} (Contact: ${res.customer_phone || 'N/A'}), Mumbai, Maharashtra, India`);
+                setShowInvoiceModal(true); 
+            }
+            setStageNotesCode("");
         } catch (error) {
             console.error("Stage update failure", error);
             toast.error("Failed to update milestone.");
@@ -440,6 +564,18 @@ export default function Dashboard() {
         }
     };
 
+    // Shop Owner: Toggle technician B2B verification status
+    const handleToggleVerification = async (techId, currentStatus) => {
+        try {
+            await updateTechnician(techId, { is_verified: !currentStatus });
+            toast.success(`Technician verification status updated successfully.`);
+            loadDashboardData();
+        } catch (err) {
+            console.error("Failed toggling technician verification", err);
+            toast.error("Failed to toggle verification status.");
+        }
+    };
+
     // Shop Owner: Register new spares consumed
     const handleAddSparesInventory = async (e) => {
         e.preventDefault();
@@ -468,7 +604,8 @@ export default function Dashboard() {
                 purchase_price: "",
                 selling_price: "",
                 hsn_code: "8517",
-                gst_rate: 18.00
+                gst_rate: 18.00,
+                image: ""
             });
 
             // Refresh inventory
@@ -498,19 +635,67 @@ export default function Dashboard() {
                 billing_address: invoiceBillingAddress || (activeInvoiceTicket.customer_username + ", Mumbai")
             };
 
-            await createInvoice(invoicePayload);
+            const res = await createInvoice(invoicePayload);
             toast.success("CGST/SGST compliant GST invoice generated successfully!");
             setShowInvoiceModal(false);
             setSelectedSpares([]);
             setLaborCharges("0.00");
             setInvoiceCustomerGstin("");
             setInvoiceBillingAddress("");
+
+            // Automatically open print preview of compiled PDF invoice
+            setSelectedPreviewInvoice(res);
+            setShowInvoicePreviewModal(true);
             
             // Refresh dataset
             loadDashboardData();
         } catch (error) {
             console.error("Failed invoice generation", error);
             toast.error("Invoice compilation failed.");
+        }
+    };
+
+    // Shop Owner: Submit manually compiled GST invoice
+    const handleManualInvoiceSubmit = async (e) => {
+        e.preventDefault();
+        if (!manualInvoiceForm.customer_name || !manualInvoiceForm.billing_address) {
+            toast.error("Complete customer name and billing address.");
+            return;
+        }
+
+        try {
+            // Package the customer name, phone, and manual items inside dynamic payload
+            const manualItemsPayload = {
+                customer_name: manualInvoiceForm.customer_name,
+                customer_phone: manualInvoiceForm.customer_phone,
+                items: manualInvoiceForm.items
+            };
+
+            const invoicePayload = {
+                ticket: null, // manual invoice
+                labor_charges: parseFloat(manualInvoiceForm.labor_charges || 0).toFixed(2),
+                shop_gstin: manualInvoiceForm.shop_gstin || "27AAAAA1111A1Z1",
+                customer_gstin: manualInvoiceForm.customer_gstin || "",
+                billing_address: manualInvoiceForm.billing_address,
+                payment_method: manualInvoiceForm.payment_method,
+                payment_status: manualInvoiceForm.payment_status,
+                manual_items: manualItemsPayload
+            };
+
+            const response = await createInvoice(invoicePayload);
+            toast.success("Custom manual GST invoice generated successfully!");
+            setShowManualInvoiceModal(false);
+            
+            // Refresh invoices list
+            const freshInvs = await fetchInvoices();
+            setInvoices(freshInvs);
+
+            // Open print preview directly
+            setSelectedPreviewInvoice(response);
+            setShowInvoicePreviewModal(true);
+        } catch (error) {
+            console.error("Manual invoice generation failed", error);
+            toast.error("Manual invoice compilation failed.");
         }
     };
 
@@ -564,13 +749,16 @@ export default function Dashboard() {
 
     // Derived owner metrics calculations
     const openTicketsCount = tickets.filter(t => t.status_code !== "delivered").length;
-    const completedTicketsCount = tickets.filter(t => t.status_code === "delivered").length;
+    const completedTicketsCount = tickets.filter(t => t.status_code === "ready" || t.status_code === "delivered").length;
     const activeTechsCount = technicians.length;
     const lowStockSparesCount = inventory.filter(item => item.stock_level <= item.low_stock_threshold).length;
     const totalRevEst = tickets
         .filter(t => t.status_code === "delivered")
         .reduce((sum, t) => sum + parseFloat(t.estimated_cost || 0), 0);
 
+    // ============================================================================
+    // ─── 6. CORE LAYOUTS & NAVIGATION DRAWERS (JSX) ─────────────────────────────
+    // ============================================================================
     return (
         <>
             <Toaster position="top-center" />
@@ -598,7 +786,7 @@ export default function Dashboard() {
                         </div>
                         
                         {/* Profile action menu dropdown */}
-                        <div className="relative">
+                        <div className="relative profile-menu-container">
                             <button 
                                 onClick={() => setShowProfileMenu(prev => !prev)}
                                 className="w-8 h-8 rounded-full overflow-hidden bg-primary-container border border-outline flex items-center justify-center font-bold text-primary text-sm shadow-sm cursor-pointer"
@@ -606,14 +794,16 @@ export default function Dashboard() {
                                 {user?.username?.substring(0, 2).toUpperCase()}
                             </button>
                             {showProfileMenu && (
-                                <div className="absolute right-0 top-full mt-2 bg-surface shadow-md rounded-xl border border-outline-variant p-2 w-48 z-50 animate-fadeIn">
-                                    <button 
-                                        onClick={handleLogout}
-                                        className="w-full flex items-center gap-2 p-2 text-sm text-error hover:bg-error-container rounded-lg font-bold transition-all text-left"
-                                    >
-                                        <span className="material-symbols-outlined text-[18px]">logout</span>
-                                        <span>Sign Out</span>
-                                    </button>
+                                <div className="absolute right-0 top-full pt-2 w-48 z-50 animate-fadeIn">
+                                    <div className="bg-surface shadow-md rounded-xl border border-outline-variant p-2">
+                                        <button 
+                                            onClick={handleLogout}
+                                            className="w-full flex items-center gap-2 p-2 text-sm text-error hover:bg-error-container rounded-lg font-bold transition-all text-left cursor-pointer"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">logout</span>
+                                            <span>Sign Out</span>
+                                        </button>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -850,6 +1040,71 @@ export default function Dashboard() {
                             </div>
                         ) : (
                             <>
+                                {/* ── LIVE LOCATION CONTROLLER PANEL (CUSTOMERS & TECHNICIANS) ── */}
+                                {(user.role === "customer" || user.role === "technician") && (
+                                    <div className="bg-surface-container-lowest border border-surface-container p-4 rounded-xl shadow-sm space-y-3 text-left animate-fadeIn">
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary">
+                                                    <span className="material-symbols-outlined animate-pulse">location_on</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[10px] font-extrabold text-outline uppercase tracking-wider block">Active Operating Coordinates Center</span>
+                                                    <p className="font-bold text-sm text-on-surface flex items-center gap-1.5 mt-0.5">
+                                                        <span className="font-mono text-primary font-extrabold bg-primary/5 px-2 py-0.5 rounded border border-primary/10">Lat: {userLat.toFixed(6)}</span>
+                                                        <span className="font-mono text-primary font-extrabold bg-primary/5 px-2 py-0.5 rounded border border-primary/10">Lng: {userLng.toFixed(6)}</span>
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-2">
+                                                <button 
+                                                    type="button"
+                                                    onClick={handleAutoFetchLocation}
+                                                    className="px-3.5 h-10 bg-primary hover:bg-primary-container text-on-primary hover:text-primary rounded-lg font-bold text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-sm"
+                                                    title="Query Device Geolocation API"
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">my_location</span>
+                                                    <span>Auto GPS</span>
+                                                </button>
+                                                
+                                                <select
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        if (val) {
+                                                            const [lat, lng, label] = val.split("|");
+                                                            setUserLat(parseFloat(lat));
+                                                            setUserLng(parseFloat(lng));
+                                                            setLocationMethod("manual_search");
+                                                            setLocationProviderInfo(`Manual Search Directory (Provider: OpenStreetMap Nominatim Engine)`);
+                                                            toast.success(`Position updated to ${label}!`);
+                                                        }
+                                                    }}
+                                                    value={`${userLat}|${userLng}`}
+                                                    className="px-3 h-10 bg-surface border border-outline rounded-lg font-bold text-xs cursor-pointer focus:ring-2 focus:ring-primary text-on-surface outline-none"
+                                                >
+                                                    <option value="19.0760|72.8777">🔍 Select Station...</option>
+                                                    <option value="19.0178|72.8478|Dadar, Mumbai">Dadar West Franchise Hub</option>
+                                                    <option value="19.1136|72.8697|Andheri, Mumbai">Andheri East Tech Park</option>
+                                                    <option value="19.0596|72.8295|Bandra, Mumbai">Bandra Reclamation Hub</option>
+                                                    <option value="19.2183|72.9781|Thane, Mumbai">Thane Central Franchise</option>
+                                                    <option value="18.9067|72.8147|Colaba, Mumbai">Colaba B2B Center</option>
+                                                    <option value="19.0700|72.8800|Kurla, Mumbai">Kurla Junction Station</option>
+                                                    <option value="19.2307|72.8567|Borivali, Mumbai">Borivali West Hub</option>
+                                                    <option value="19.0860|72.9080|Ghatkopar, Mumbai">Ghatkopar Central Plaza</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-1.5 text-[11px] text-outline-variant font-bold border-t border-surface-container pt-2.5">
+                                            <span className="material-symbols-outlined text-[14px] text-secondary">verified_user</span>
+                                            <span>Telemetry Location Engine: </span>
+                                            <strong className="text-secondary uppercase">{locationMethod === "device_gps" ? "Active GPS Fetch" : locationMethod === "manual_search" ? "Manual Directory Search" : "Default Initial Center"}</strong>
+                                            <span className="text-[10px] text-outline font-semibold">| Provider: {locationProviderInfo || "Core Spatial Map Engine"}</span>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* ── CUSTOMER VIEW ── */}
                                 {user.role === "customer" && activeTab === "repairs" && (
                                     <div className="space-y-6">
@@ -875,18 +1130,37 @@ export default function Dashboard() {
                                                 {tickets.map((t) => {
                                                     const sObj = getStatusLabelAndColor(t.status_code);
                                                     return (
-                                                        <div key={t.id} className="bg-surface-container-lowest rounded-xl p-6 border-l-4 border-primary shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                                                        <div key={t.id} className="bg-surface-container-lowest rounded-xl p-6 border-l-4 border-primary shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group text-left">
                                                             <div className="flex justify-between items-start mb-4 flex-wrap gap-2">
                                                                 <div>
                                                                     <div className="flex items-center gap-2">
                                                                         <h4 className="font-headline-md text-lg font-bold text-on-surface">{t.device_brand} {t.device_model}</h4>
                                                                         <span className="text-[11px] font-bold px-2 py-0.5 bg-surface-container-high rounded text-primary uppercase">{t.device_category}</span>
                                                                     </div>
-                                                                    <p className="text-xs text-outline font-semibold mt-1">Ticket: {t.ticket_number}</p>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <p className="text-xs text-outline font-semibold">Ticket: <span className="font-mono uppercase">{t.ticket_number}</span></p>
+                                                                        <button 
+                                                                            onClick={() => {
+                                                                                setSuccessTicketNumber(t.ticket_number);
+                                                                                setSuccessDeviceName(`${t.device_brand} ${t.device_model}`);
+                                                                                setShowSuccessQrModal(true);
+                                                                            }}
+                                                                            className="text-primary hover:text-primary-container flex items-center gap-0.5 text-[11px] font-bold"
+                                                                            title="Display Tracking QR Code"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[14px]">qr_code_2</span>
+                                                                            <span>QR Tracker</span>
+                                                                        </button>
+                                                                    </div>
                                                                     <p className="text-xs text-on-surface-variant font-semibold mt-1 flex items-center gap-1">
                                                                         <span className="material-symbols-outlined text-[14px]">storefront</span>
                                                                         <span>{t.branch_name}</span>
                                                                     </p>
+                                                                    {t.device_image && (
+                                                                        <div className="mt-3 relative w-full max-w-[150px] aspect-video rounded-lg overflow-hidden border border-outline-variant shadow-sm bg-surface-container">
+                                                                            <img src={t.device_image} alt="Intake Device" className="w-full h-full object-cover" />
+                                                                        </div>
+                                                                    )}
                                                                 </div>
 
                                                                 <div className="flex flex-col items-end text-right">
@@ -1109,17 +1383,24 @@ export default function Dashboard() {
                                                                                     <span className="material-symbols-outlined text-[14px]">directions</span>
                                                                                     <span>Route</span>
                                                                                 </a>
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        setSelectedBranch(b);
-                                                                                        setShowBookingModal(true);
-                                                                                    }}
-                                                                                    className="h-8 px-3 bg-primary text-on-primary hover:bg-primary-container rounded-lg text-xs font-bold flex items-center gap-0.5 transition-all shadow-sm active:scale-95"
-                                                                                >
-                                                                                    <span className="material-symbols-outlined text-[14px]">calendar_month</span>
-                                                                                    <span>Book Now</span>
-                                                                                </button>
+                                                                                {b.is_local_db ? (
+                                                                                    <button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            setSelectedBranch(b);
+                                                                                            setShowBookingModal(true);
+                                                                                        }}
+                                                                                        className="h-8 px-3 bg-primary text-on-primary hover:bg-primary-container rounded-lg text-xs font-bold flex items-center gap-0.5 transition-all shadow-sm active:scale-95"
+                                                                                    >
+                                                                                        <span className="material-symbols-outlined text-[14px]">calendar_month</span>
+                                                                                        <span>Book Now</span>
+                                                                                    </button>
+                                                                                ) : (
+                                                                                    <span className="text-[10px] text-outline font-semibold uppercase flex items-center gap-0.5 bg-surface-container px-2.5 h-8 rounded-lg">
+                                                                                        <span className="material-symbols-outlined text-[12px]">info</span>
+                                                                                        <span>Google Listing</span>
+                                                                                    </span>
+                                                                                )}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -1176,13 +1457,12 @@ export default function Dashboard() {
                                                         {/* Distance Ring Indicator labels */}
                                                         <span className="absolute text-[8px] font-mono text-primary/50 top-1/2 left-3/4 translate-x-1.5 -translate-y-2 pointer-events-none">10km</span>
                                                         <span className="absolute text-[8px] font-mono text-primary/50 top-1/2 left-[60%] translate-x-1 -translate-y-2 pointer-events-none">5km</span>
-
                                                         {/* Central Point Indicator (User Location) */}
                                                         <div className="absolute z-20 flex flex-col items-center justify-center pointer-events-none">
                                                             <div className="w-3 h-3 rounded-full bg-secondary border border-white relative shadow-lg flex items-center justify-center">
                                                                 <span className="absolute w-6 h-6 rounded-full bg-secondary/30 animate-ping"></span>
                                                             </div>
-                                                            <span className="text-[9px] font-bold text-white mt-1 px-1.5 py-0.5 bg-black/70 rounded border border-white/20">You (Mumbai)</span>
+                                                            <span className="text-[9px] font-bold text-white mt-1 px-1.5 py-0.5 bg-black/70 rounded border border-white/20">You ({userLat.toFixed(2)}, {userLng.toFixed(2)})</span>
                                                         </div>
 
                                                         {/* SVG Coordinate points overlay */}
@@ -1192,7 +1472,7 @@ export default function Dashboard() {
                                                                 .map((b, idx) => {
                                                                     const maxDistance = Math.max(...branches.map(br => br.distance || 1), 1);
                                                                     // calculate vector angle based on latitude offsets
-                                                                    const angle = Math.atan2(b.latitude - 19.0760, b.longitude - 72.8777);
+                                                                    const angle = Math.atan2(b.latitude - userLat, b.longitude - userLng);
                                                                     // scale radial radius between 25px and 125px on 150px half-width
                                                                     const r = 30 + ((b.distance || 1) / maxDistance) * 105;
                                                                     const cx = 150 + r * Math.cos(angle);
@@ -1307,7 +1587,7 @@ export default function Dashboard() {
                                                         }
                                                         setWalkinForm({
                                                             customer: customers[0]?.id || "",
-                                                            branch: branches[0]?.id || "",
+                                                            branch: branches.find(b => b.is_local_db)?.id || "",
                                                             device_category: "Smartphone",
                                                             device_brand: "",
                                                             device_model: "",
@@ -1389,7 +1669,7 @@ export default function Dashboard() {
                                             <>
 
                                         {/* Metrics Grid */}
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                             <div className="bg-surface-container-lowest p-5 rounded-xl border border-surface-container border-l-4 border-primary shadow-sm flex flex-col justify-between h-28">
                                                 <div className="flex justify-between items-start">
                                                     <span className="text-[12px] font-bold text-outline uppercase">Active Workloads</span>
@@ -1406,6 +1686,14 @@ export default function Dashboard() {
                                                 <p className="text-3xl font-bold text-on-surface mt-1">{activeTechsCount} <span className="text-xs text-outline font-semibold">on shop benched</span></p>
                                             </div>
 
+                                            <div className="bg-surface-container-lowest p-5 rounded-xl border border-surface-container border-l-4 border-success shadow-sm flex flex-col justify-between h-28">
+                                                <div className="flex justify-between items-start">
+                                                    <span className="text-[12px] font-bold text-outline uppercase">Jobs Completed</span>
+                                                    <span className="material-symbols-outlined text-success text-[20px]">check_circle</span>
+                                                </div>
+                                                <p className="text-3xl font-bold text-on-surface mt-1">{completedTicketsCount} <span className="text-xs text-outline font-semibold">devices serviced</span></p>
+                                            </div>
+
                                             <div className="bg-surface-container-lowest p-5 rounded-xl border border-surface-container border-l-4 border-error shadow-sm flex flex-col justify-between h-28">
                                                 <div className="flex justify-between items-start">
                                                     <span className="text-[12px] font-bold text-outline uppercase">Low Spares Warnings</span>
@@ -1417,9 +1705,24 @@ export default function Dashboard() {
 
                                         {/* ERP Main workflow table */}
                                         <div className="bg-surface-container-lowest rounded-xl border border-surface-container overflow-hidden shadow-sm">
-                                            <div className="p-4 border-b border-surface-container flex justify-between items-center">
+                                            <div className="p-4 border-b border-surface-container flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                                                 <h3 className="font-bold text-md text-primary">Repair Order Workloads</h3>
-                                                <span className="text-xs font-bold bg-primary/10 text-primary px-2 py-0.5 rounded">Real-Time Sync</span>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <select
+                                                        value={selectedWorkloadBranch}
+                                                        onChange={(e) => setSelectedWorkloadBranch(e.target.value)}
+                                                        className="h-9 border border-outline rounded-lg text-xs font-bold bg-surface px-2 outline-none cursor-pointer focus:ring-1 focus:ring-primary shadow-sm"
+                                                    >
+                                                        <option value="">All Branches</option>
+                                                        {branches.filter(b => b.is_local_db).map(b => (
+                                                            <option key={b.id} value={b.id}>{b.name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <span className="text-[11px] font-bold bg-primary/10 text-primary px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-sm">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                                                        <span>Real-Time Sync</span>
+                                                    </span>
+                                                </div>
                                             </div>
                                             <div className="overflow-x-auto">
                                                 <table className="w-full text-left border-collapse text-sm">
@@ -1433,28 +1736,50 @@ export default function Dashboard() {
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {tickets.length === 0 ? (
+                                                        {tickets.filter(t => !selectedWorkloadBranch || t.branch === parseInt(selectedWorkloadBranch)).length === 0 ? (
                                                             <tr>
                                                                 <td colSpan="5" className="p-8 text-center text-on-surface-variant font-semibold">No active repair orders registered yet.</td>
                                                             </tr>
                                                         ) : (
-                                                            tickets.map((t) => {
-                                                                const sObj = getStatusLabelAndColor(t.status_code);
+                                                            tickets
+                                                                .filter(t => !selectedWorkloadBranch || t.branch === parseInt(selectedWorkloadBranch))
+                                                                .map((t) => {
+                                                                    const sObj = getStatusLabelAndColor(t.status_code);
                                                                 return (
                                                                     <tr key={t.id} className="border-b border-surface-container hover:bg-surface-container-low transition-colors">
                                                                         <td className="p-3">
-                                                                            <p className="font-bold text-on-surface">{t.device_brand} {t.device_model}</p>
-                                                                            <div className="flex items-center gap-1.5 mt-0.5">
-                                                                                <span className="text-[11px] text-outline font-semibold">{t.ticket_number}</span>
-                                                                                <button 
-                                                                                    onClick={() => setExpandedTicketId(expandedTicketId === t.id ? null : t.id)}
-                                                                                    className="text-[10px] font-bold text-primary hover:underline flex items-center gap-0.5"
-                                                                                >
-                                                                                    <span className="material-symbols-outlined text-[12px]">
-                                                                                        {expandedTicketId === t.id ? "unfold_less" : "unfold_more"}
-                                                                                    </span>
-                                                                                    <span>Logs</span>
-                                                                                </button>
+                                                                            <div className="flex items-start gap-2.5">
+                                                                                {t.device_image && (
+                                                                                    <div className="w-10 h-10 rounded border border-outline overflow-hidden bg-surface-container flex-shrink-0">
+                                                                                        <img src={t.device_image} alt="Device Preview" className="w-full h-full object-cover" />
+                                                                                    </div>
+                                                                                )}
+                                                                                <div>
+                                                                                    <p className="font-bold text-on-surface">{t.device_brand} {t.device_model}</p>
+                                                                                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                                                                        <span className="text-[11px] text-outline font-semibold font-mono">{t.ticket_number}</span>
+                                                                                        <button 
+                                                                                            onClick={() => setExpandedTicketId(expandedTicketId === t.id ? null : t.id)}
+                                                                                            className="text-[10px] font-bold text-primary hover:underline flex items-center gap-0.5"
+                                                                                        >
+                                                                                            <span className="material-symbols-outlined text-[12px]">
+                                                                                                {expandedTicketId === t.id ? "unfold_less" : "unfold_more"}
+                                                                                            </span>
+                                                                                            <span>Logs</span>
+                                                                                        </button>
+                                                                                        <button 
+                                                                                            onClick={() => {
+                                                                                                setSuccessTicketNumber(t.ticket_number);
+                                                                                                setSuccessDeviceName(`${t.device_brand} ${t.device_model}`);
+                                                                                                setShowSuccessQrModal(true);
+                                                                                            }}
+                                                                                            className="text-[10px] font-bold text-secondary hover:underline flex items-center gap-0.5"
+                                                                                        >
+                                                                                            <span className="material-symbols-outlined text-[12px]">qr_code_2</span>
+                                                                                            <span>QR Code</span>
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </div>
                                                                             </div>
                                                                             
                                                                             {expandedTicketId === t.id && t.history && (
@@ -1528,6 +1853,88 @@ export default function Dashboard() {
                                                 </table>
                                             </div>
                                         </div>
+
+                                        {/* Benched Technician Staff Registry */}
+                                        <div className="bg-surface-container-lowest rounded-xl border border-surface-container overflow-hidden shadow-sm mt-6">
+                                            <div className="p-4 border-b border-surface-container flex justify-between items-center">
+                                                <h3 className="font-bold text-md text-primary flex items-center gap-1.5">
+                                                    <span className="material-symbols-outlined">badge</span>
+                                                    <span>Workstation Staff Registry</span>
+                                                </h3>
+                                                <span className="text-xs font-bold bg-secondary/10 text-secondary px-2 py-0.5 rounded">Active Benched</span>
+                                            </div>
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left border-collapse text-sm">
+                                                    <thead>
+                                                        <tr className="bg-surface-container border-b border-outline-variant font-bold text-outline text-[12px] uppercase">
+                                                            <th className="p-3">Technician</th>
+                                                            <th className="p-3">Experience</th>
+                                                            <th className="p-3">Skills / Specialties</th>
+                                                            <th className="p-3">Assigned Workstation</th>
+                                                            <th className="p-3 text-center">Jobs Done</th>
+                                                            <th className="p-3 text-center">B2B Verification</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {technicians.length === 0 ? (
+                                                            <tr>
+                                                                <td colSpan="6" className="p-8 text-center text-on-surface-variant font-semibold">No technicians linked to this shop yet. Link technicians via join requests above.</td>
+                                                            </tr>
+                                                        ) : (
+                                                            technicians.map((tc) => (
+                                                                <tr key={tc.id} className="border-b border-surface-container hover:bg-surface-container-low transition-colors">
+                                                                    <td className="p-3 font-bold text-on-surface flex items-center gap-2">
+                                                                        <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
+                                                                            {tc.username.substring(0, 2)}
+                                                                        </div>
+                                                                        <span>{tc.username}</span>
+                                                                    </td>
+                                                                    <td className="p-3 font-semibold text-on-surface-variant">{tc.experience_years} Years</td>
+                                                                    <td className="p-3 font-medium text-on-surface-variant max-w-[200px]">
+                                                                        <div className="flex flex-wrap gap-1">
+                                                                            {tc.skills_list && tc.skills_list.length > 0 ? (
+                                                                                tc.skills_list.map((sk) => (
+                                                                                    <span key={sk.id} className="bg-primary/5 text-primary text-[10px] font-semibold px-2 py-0.5 rounded border border-primary/5">
+                                                                                        {sk.name}
+                                                                                    </span>
+                                                                                ))
+                                                                            ) : (
+                                                                                <span className="text-outline text-[11px]">General Hardware</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="p-3 font-bold text-xs text-on-surface">
+                                                                        {tc.branch_name || "Dadar / Hub Central Workstation"}
+                                                                    </td>
+                                                                    <td className="p-3 text-center font-bold text-sm text-secondary">
+                                                                        {
+                                                                            tickets.filter(
+                                                                                t => t.technician_name === tc.username && (t.status_code === "ready" || t.status_code === "delivered")
+                                                                            ).length
+                                                                        }
+                                                                    </td>
+                                                                    <td className="p-3 text-center">
+                                                                        <button
+                                                                            onClick={() => handleToggleVerification(tc.id, tc.is_verified)}
+                                                                            className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1 mx-auto active:scale-95 transition-all shadow-sm ${
+                                                                                tc.is_verified 
+                                                                                    ? "bg-success/15 text-success hover:bg-success/20 border border-success/20" 
+                                                                                    : "bg-warning/15 text-warning hover:bg-warning/20 border border-warning/20"
+                                                                            }`}
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[14px]">
+                                                                                {tc.is_verified ? "verified" : "pending_actions"}
+                                                                            </span>
+                                                                            <span>{tc.is_verified ? "Verified Staff" : "Verify Credentials"}</span>
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            ))
+                                                        )}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
                                     </>
                                 )}
                                     </div>
@@ -1579,8 +1986,21 @@ export default function Dashboard() {
                                                             inventory.map((item) => (
                                                                 <tr key={item.id} className="border-b border-surface-container hover:bg-surface-container-low transition-colors">
                                                                     <td className="p-3 font-bold text-on-surface">
-                                                                        <p>{item.name}</p>
-                                                                        <p className="text-[11px] text-outline font-semibold mt-0.5">SKU: {item.sku}</p>
+                                                                        <div className="flex items-start gap-2.5">
+                                                                            {item.image ? (
+                                                                                <div className="w-10 h-10 rounded border border-outline overflow-hidden bg-surface-container flex-shrink-0">
+                                                                                    <img src={item.image} alt="Spare Part" className="w-full h-full object-cover" />
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="w-10 h-10 rounded border border-outline bg-surface-container-low flex items-center justify-center flex-shrink-0 text-outline">
+                                                                                    <span className="material-symbols-outlined text-[20px]">build</span>
+                                                                                </div>
+                                                                            )}
+                                                                            <div>
+                                                                                <p>{item.name}</p>
+                                                                                <p className="text-[11px] text-outline font-semibold mt-0.5">SKU: {item.sku}</p>
+                                                                            </div>
+                                                                        </div>
                                                                     </td>
                                                                     <td className="p-3 text-on-surface-variant font-semibold">{item.category}</td>
                                                                     <td className="p-3 text-center">
@@ -1724,10 +2144,10 @@ export default function Dashboard() {
 
                                     // If linked to a B2B Shop
                                     const techCompletedRepairs = tickets.filter(
-                                        t => t.technician_name === user.username && (t.status_code === "ready" || t.status_code === "delivered")
+                                        t => (t.technician_name === user.username || !t.assigned_technician) && (t.status_code === "ready" || t.status_code === "delivered")
                                     );
                                     const techActiveRepairs = tickets.filter(
-                                        t => t.technician_name === user.username && t.status_code !== "ready" && t.status_code !== "delivered" && t.status_code !== "cancelled"
+                                        t => t.status_code !== "ready" && t.status_code !== "delivered" && t.status_code !== "cancelled"
                                     );
 
                                     const getIncentive = (ticket) => {
@@ -1754,7 +2174,7 @@ export default function Dashboard() {
                                                         }
                                                         setWalkinForm({
                                                             customer: customers[0]?.id || "",
-                                                            branch: branches[0]?.id || "",
+                                                            branch: branches.find(b => b.is_local_db)?.id || "",
                                                             device_category: "Smartphone",
                                                             device_brand: "",
                                                             device_model: "",
@@ -1774,7 +2194,28 @@ export default function Dashboard() {
                                             </div>
 
                                             {/* Metrics Bento Scorecard */}
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                                <div className="bg-surface-container-lowest p-5 rounded-xl border border-surface-container border-l-4 border-secondary shadow-sm flex flex-col justify-between h-28 animate-scaleIn">
+                                                    <div className="flex justify-between items-start">
+                                                        <span className="text-[12px] font-bold text-outline uppercase">Credential Verification</span>
+                                                        <span className={`material-symbols-outlined text-[20px] ${techDetails.is_verified ? "text-secondary" : "text-amber-500 animate-pulse"}`} style={techDetails.is_verified ? { fontVariationSettings: "'FILL' 1" } : {}}>
+                                                            {techDetails.is_verified ? "verified" : "pending_actions"}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className={`px-2 py-0.5 rounded font-bold text-[9px] uppercase border ${
+                                                            techDetails.is_verified 
+                                                                ? "bg-success/10 text-success border-success/20" 
+                                                                : "bg-warning/10 text-warning border-warning/20 animate-pulse"
+                                                        }`}>
+                                                            {techDetails.is_verified ? "Verified Staff" : "Unverified Status"}
+                                                        </span>
+                                                        <p className="text-[10px] text-outline font-semibold mt-1 truncate">
+                                                            {techDetails.is_verified ? "Authorized B2B operator" : "Awaiting owner verification"}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
                                                 <div className="bg-surface-container-lowest p-5 rounded-xl border border-surface-container border-l-4 border-primary shadow-sm flex flex-col justify-between h-28 animate-scaleIn">
                                                     <div className="flex justify-between items-start">
                                                         <span className="text-[12px] font-bold text-outline uppercase">Active Workstation</span>
@@ -1822,7 +2263,26 @@ export default function Dashboard() {
                                                                         <div className="flex justify-between items-start">
                                                                             <div>
                                                                                 <h4 className="font-bold text-md text-on-surface">{t.device_brand} {t.device_model}</h4>
-                                                                                <p className="text-[11px] text-outline font-semibold mt-0.5">ID: {t.ticket_number}</p>
+                                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                                    <p className="text-[11px] text-outline font-semibold">ID: {t.ticket_number}</p>
+                                                                                    <button 
+                                                                                        onClick={() => {
+                                                                                            setSuccessTicketNumber(t.ticket_number);
+                                                                                            setSuccessDeviceName(`${t.device_brand} ${t.device_model}`);
+                                                                                            setShowSuccessQrModal(true);
+                                                                                        }}
+                                                                                        className="text-primary hover:text-primary-container flex items-center gap-0.5 text-[10px] font-bold"
+                                                                                        title="Display Tracking QR Code"
+                                                                                    >
+                                                                                        <span className="material-symbols-outlined text-[13px]">qr_code_2</span>
+                                                                                        <span>QR Code</span>
+                                                                                    </button>
+                                                                                </div>
+                                                                                {t.device_image && (
+                                                                                    <div className="mt-2 w-14 h-14 rounded border border-outline overflow-hidden bg-surface-container">
+                                                                                        <img src={t.device_image} alt="Device Intake" className="w-full h-full object-cover" />
+                                                                                    </div>
+                                                                                )}
                                                                             </div>
                                                                             <span 
                                                                                 style={{ color: sObj.color, borderColor: sObj.color, backgroundColor: `${sObj.color}10` }}
@@ -2039,7 +2499,7 @@ export default function Dashboard() {
                                     <div className="space-y-6 animate-fadeIn">
                                         <div className="mb-4">
                                             <h2 className="font-headline-xl text-[28px] font-bold text-primary">GST Invoices & Financial Analytics</h2>
-                                            <p className="font-body-md text-on-surface-variant">Real-time tracking of CGST/SGST collected, spares value, and InvoiceNinja synchronization logs.</p>
+                                            <p className="font-body-md text-on-surface-variant">Real-time tracking of CGST/SGST collected, spares value, and printable B2B tax invoice logs.</p>
                                         </div>
 
                                         {/* Financial Analytics Bento Grid */}
@@ -2089,10 +2549,26 @@ export default function Dashboard() {
                                         <div className="bg-surface-container-lowest rounded-xl border border-surface-container overflow-hidden shadow-sm">
                                             <div className="p-4 border-b border-surface-container flex justify-between items-center flex-wrap gap-2">
                                                 <h3 className="font-bold text-md text-primary">Compiled Invoices Registry</h3>
-                                                <span className="text-xs font-bold bg-[#1e40af]/10 text-[#1e40af] px-2 py-0.5 rounded flex items-center gap-0.5">
-                                                    <span className="material-symbols-outlined text-[13px]">sync</span>
-                                                    <span>InvoiceNinja Synced</span>
-                                                </span>
+                                                <button
+                                                    onClick={() => {
+                                                        setManualInvoiceForm({
+                                                            shop_gstin: "27AAAAA1111A1Z1",
+                                                            customer_name: "",
+                                                            customer_phone: "",
+                                                            customer_gstin: "",
+                                                            billing_address: "",
+                                                            labor_charges: "0.00",
+                                                            payment_method: "upi",
+                                                            payment_status: "paid",
+                                                            items: []
+                                                        });
+                                                        setShowManualInvoiceModal(true);
+                                                    }}
+                                                    className="h-9 px-4 bg-primary text-on-primary hover:bg-primary-container rounded-lg font-bold flex items-center gap-1.5 text-xs shadow active:scale-95 transition-all"
+                                                >
+                                                    <span className="material-symbols-outlined text-[15px]">add_card</span>
+                                                    <span>Manual GST Generator</span>
+                                                </button>
                                             </div>
                                             
                                             <div className="overflow-x-auto">
@@ -2168,10 +2644,13 @@ export default function Dashboard() {
 
                 </div>
 
+                {/* ============================================================================ */}
+                {/* ─── 7. SUBSYSTEM WORKFLOW MODALS & DIALOGS ───────────────────────────────── */}
+                {/* ============================================================================ */}
                 {/* ── CUSTOMER BOOKING SECURE REPAIR MODAL ── */}
                 {showBookingModal && selectedBranch && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                        <div className="bg-surface rounded-xl border border-outline-variant shadow-md p-6 max-w-lg w-full relative animate-scaleIn text-left">
+                        <div className="bg-surface rounded-xl border border-outline-variant shadow-md p-6 max-w-lg w-full relative animate-scaleIn text-left max-h-[90vh] overflow-y-auto">
                             <div className="flex justify-between items-center pb-3 border-b border-outline-variant mb-4">
                                 <h3 className="font-bold text-lg text-primary">Register Secure Repair Booking</h3>
                                 <button onClick={() => setShowBookingModal(false)} className="text-on-surface hover:text-primary">
@@ -2266,6 +2745,38 @@ export default function Dashboard() {
                                     />
                                 </div>
 
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-outline uppercase" htmlFor="book-image">Device Intake Image</label>
+                                    <input
+                                        id="book-image"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => {
+                                                    setBookingForm({ ...bookingForm, device_image: reader.result });
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }}
+                                        className="w-full text-xs text-outline border border-outline border-dashed rounded-lg p-2 bg-surface cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-primary/15 file:text-primary hover:file:bg-primary/20"
+                                    />
+                                    {bookingForm.device_image && (
+                                        <div className="mt-2 relative w-20 h-20 rounded-lg overflow-hidden border border-outline">
+                                            <img src={bookingForm.device_image} alt="Preview" className="w-full h-full object-cover" />
+                                            <button 
+                                                type="button"
+                                                onClick={() => setBookingForm({ ...bookingForm, device_image: "" })}
+                                                className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5"
+                                            >
+                                                <span className="material-symbols-outlined text-[12px] block">close</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <button
                                     type="submit"
                                     className="w-full h-11 bg-primary text-on-primary rounded-lg font-bold active:scale-95 transition-transform flex items-center justify-center gap-1 text-sm shadow"
@@ -2281,7 +2792,7 @@ export default function Dashboard() {
                 {/* ── SHOP OWNER REGISTER PHYSICAL BRANCH MODAL ── */}
                 {showAddBranchModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-                        <div className="bg-surface rounded-xl border border-outline-variant shadow-md p-6 max-w-lg w-full relative animate-scaleIn text-left">
+                        <div className="bg-surface rounded-xl border border-outline-variant shadow-md p-6 max-w-lg w-full relative animate-scaleIn text-left max-h-[90vh] overflow-y-auto">
                             <div className="flex justify-between items-center pb-3 border-b border-outline-variant mb-4">
                                 <h3 className="font-bold text-lg text-primary">Register New Branch Location</h3>
                                 <button onClick={() => setShowAddBranchModal(false)} className="text-on-surface hover:text-primary">
@@ -2346,6 +2857,72 @@ export default function Dashboard() {
                                     </div>
                                 </div>
 
+                                <div className="space-y-2 border-t border-b border-outline-variant py-3 bg-surface-container-low rounded-xl px-3 my-2">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[12px] font-bold text-primary flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-[16px]">location_on</span>
+                                            <span>Shop Coordinates Setup</span>
+                                        </span>
+                                        <span className="text-[10px] font-mono text-outline">{branchForm.latitude.toFixed(4)}, {branchForm.longitude.toFixed(4)}</span>
+                                    </div>
+                                    <p className="text-[10px] text-outline leading-relaxed">Pinpoint exact GPS coordinates to accurately map this branch for proximal customers.</p>
+                                    
+                                    <div className="flex gap-2 pt-1">
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                if (navigator.geolocation) {
+                                                    navigator.geolocation.getCurrentPosition(
+                                                        (pos) => {
+                                                            setBranchForm({ ...branchForm, latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+                                                            toast.success("Branch GPS telemetry pinned!");
+                                                        },
+                                                        () => {
+                                                            toast.error("Device GPS failed. Try choosing manually.");
+                                                        }
+                                                    );
+                                                }
+                                            }}
+                                            className="flex-grow h-9 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition-transform"
+                                        >
+                                            <span className="material-symbols-outlined text-[15px]">my_location</span>
+                                            <span>Auto-fetch GPS</span>
+                                        </button>
+                                        
+                                        <select
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                if (val) {
+                                                    const [lat, lng] = val.split("|");
+                                                    setBranchForm({ ...branchForm, latitude: parseFloat(lat), longitude: parseFloat(lng) });
+                                                }
+                                            }}
+                                            className="flex-grow h-9 bg-surface border border-outline rounded-lg font-bold text-xs cursor-pointer focus:ring-1 focus:ring-primary text-on-surface text-center outline-none"
+                                        >
+                                            <option value="">📍 Choose Hub...</option>
+                                            <option value="19.0178|72.8478">Dadar East Hub</option>
+                                            <option value="19.1136|72.8697">Andheri West Hub</option>
+                                            <option value="19.0596|72.8295">Bandra West Hub</option>
+                                            <option value="19.2183|72.9781">Thane Franchise Hub</option>
+                                            <option value="18.9067|72.8147">Colaba central Hub</option>
+                                            <option value="19.0700|72.8800">Kurla center Hub</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-outline uppercase" htmlFor="br-gst">Branch GSTIN *</label>
+                                    <input
+                                        id="br-gst"
+                                        type="text"
+                                        placeholder="e.g. 27AAAAA1111A1Z1"
+                                        value={branchForm.gst_number}
+                                        onChange={(e) => setBranchForm({ ...branchForm, gst_number: e.target.value })}
+                                        className="w-full h-11 border border-outline rounded-lg text-sm px-3 bg-surface outline-none mb-2"
+                                        required
+                                    />
+                                </div>
+
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-outline uppercase" htmlFor="br-addr">Physical Address *</label>
                                     <textarea
@@ -2374,7 +2951,7 @@ export default function Dashboard() {
                 {/* ── SHOP OWNER & TECHNICIAN WALK-IN BOOK REPAIR MODAL ── */}
                 {showWalkinModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-                        <div className="bg-surface rounded-xl border border-outline-variant shadow-md p-6 max-w-lg w-full relative animate-scaleIn text-left">
+                        <div className="bg-surface rounded-xl border border-outline-variant shadow-md p-6 max-w-lg w-full relative animate-scaleIn text-left max-h-[90vh] overflow-y-auto">
                             <div className="flex justify-between items-center pb-3 border-b border-outline-variant mb-4">
                                 <h3 className="font-bold text-lg text-primary">Book Walk-in Repair Order</h3>
                                 <button onClick={() => setShowWalkinModal(false)} className="text-on-surface hover:text-primary">
@@ -2410,7 +2987,7 @@ export default function Dashboard() {
                                             required
                                         >
                                             <option value="">-- Select Branch --</option>
-                                            {branches.map(b => (
+                                            {branches.filter(b => b.is_local_db).map(b => (
                                                 <option key={b.id} value={b.id}>{b.name} ({b.city})</option>
                                             ))}
                                         </select>
@@ -2530,6 +3107,38 @@ export default function Dashboard() {
                                     />
                                 </div>
 
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-outline uppercase" htmlFor="walk-image">Device Intake Image</label>
+                                    <input
+                                        id="walk-image"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => {
+                                                    setWalkinForm({ ...walkinForm, device_image: reader.result });
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }}
+                                        className="w-full text-xs text-outline border border-outline border-dashed rounded-lg p-2 bg-surface cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-primary/15 file:text-primary hover:file:bg-primary/20"
+                                    />
+                                    {walkinForm.device_image && (
+                                        <div className="mt-2 relative w-20 h-20 rounded-lg overflow-hidden border border-outline">
+                                            <img src={walkinForm.device_image} alt="Preview" className="w-full h-full object-cover" />
+                                            <button 
+                                                type="button"
+                                                onClick={() => setWalkinForm({ ...walkinForm, device_image: "" })}
+                                                className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5"
+                                            >
+                                                <span className="material-symbols-outlined text-[12px] block">close</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <button
                                     type="submit"
                                     className="w-full h-11 bg-primary text-on-primary rounded-lg font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 text-sm shadow"
@@ -2545,7 +3154,7 @@ export default function Dashboard() {
                 {/* ── SHOP OWNER SPARES ADD INVENTORY MODAL ── */}
                 {showAddInventory && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                        <div className="bg-surface rounded-xl border border-outline-variant shadow-md p-6 max-w-lg w-full relative animate-scaleIn text-left">
+                        <div className="bg-surface rounded-xl border border-outline-variant shadow-md p-6 max-w-lg w-full relative animate-scaleIn text-left max-h-[90vh] overflow-y-auto">
                             <div className="flex justify-between items-center pb-3 border-b border-outline-variant mb-4">
                                 <h3 className="font-bold text-lg text-primary">Catalog Spare Item</h3>
                                 <button onClick={() => setShowAddInventory(false)} className="text-on-surface hover:text-primary">
@@ -2664,6 +3273,38 @@ export default function Dashboard() {
                                     </div>
                                 </div>
 
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-outline uppercase" htmlFor="inv-image">Spare Part Image</label>
+                                    <input
+                                        id="inv-image"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => {
+                                                    setInventoryForm({ ...inventoryForm, image: reader.result });
+                                                };
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }}
+                                        className="w-full text-xs text-outline border border-outline border-dashed rounded-lg p-2 bg-surface cursor-pointer file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-primary/15 file:text-primary hover:file:bg-primary/20"
+                                    />
+                                    {inventoryForm.image && (
+                                        <div className="mt-2 relative w-20 h-20 rounded-lg overflow-hidden border border-outline">
+                                            <img src={inventoryForm.image} alt="Preview" className="w-full h-full object-cover" />
+                                            <button 
+                                                type="button"
+                                                onClick={() => setInventoryForm({ ...inventoryForm, image: "" })}
+                                                className="absolute top-0.5 right-0.5 bg-black/60 text-white rounded-full p-0.5"
+                                            >
+                                                <span className="material-symbols-outlined text-[12px] block">close</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <button
                                     type="submit"
                                     className="w-full h-11 bg-primary text-on-primary rounded-lg font-bold active:scale-95 transition-transform flex items-center justify-center gap-1 text-sm shadow"
@@ -2679,7 +3320,7 @@ export default function Dashboard() {
                 {/* ── SHOP OWNER COMPLIANT GST INVOICE GENERATION MODAL ── */}
                 {showInvoiceModal && activeInvoiceTicket && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                        <div className="bg-surface rounded-xl border border-outline-variant shadow-md p-6 max-w-lg w-full relative animate-scaleIn text-left">
+                        <div className="bg-surface rounded-xl border border-outline-variant shadow-md p-6 max-w-lg w-full relative animate-scaleIn text-left max-h-[90vh] overflow-y-auto">
                             <div className="flex justify-between items-center pb-3 border-b border-outline-variant mb-4">
                                 <h3 className="font-bold text-lg text-primary flex items-center gap-1">
                                     <span className="material-symbols-outlined">receipt_long</span>
@@ -2808,6 +3449,288 @@ export default function Dashboard() {
                     </div>
                 )}
 
+                {/* ── SHOP OWNER MANUAL GST INVOICE GENERATOR MODAL ── */}
+                {showManualInvoiceModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+                        <div className="bg-surface rounded-xl border border-outline-variant shadow-md p-6 max-w-xl w-full relative animate-scaleIn text-left my-8 max-h-[90vh] flex flex-col">
+                            <div className="flex justify-between items-center pb-3 border-b border-outline-variant mb-4">
+                                <h3 className="font-bold text-lg text-primary flex items-center gap-1">
+                                        <span className="material-symbols-outlined">add_card</span>
+                                        <span>Manual GST Invoice Compiler</span>
+                                </h3>
+                                <button onClick={() => setShowManualInvoiceModal(false)} className="text-on-surface hover:text-primary">
+                                    <span className="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleManualInvoiceSubmit} className="space-y-4 overflow-y-auto flex-1 pr-1">
+                                {/* Customer particulars */}
+                                <div className="bg-surface-container p-4 rounded-xl border border-outline-variant/60 space-y-3">
+                                    <h4 className="font-bold text-xs text-primary uppercase tracking-wider">Client Billing particulars</h4>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-outline uppercase" htmlFor="man-cust-name">Customer Name *</label>
+                                            <input
+                                                id="man-cust-name"
+                                                type="text"
+                                                placeholder="e.g. Ramesh Sharma"
+                                                value={manualInvoiceForm.customer_name}
+                                                onChange={(e) => setManualInvoiceForm({ ...manualInvoiceForm, customer_name: e.target.value })}
+                                                className="w-full h-10 border border-outline rounded-lg text-xs px-3 bg-surface font-semibold"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-outline uppercase" htmlFor="man-cust-phone">Customer Phone</label>
+                                            <input
+                                                id="man-cust-phone"
+                                                type="text"
+                                                placeholder="e.g. 9820098200"
+                                                value={manualInvoiceForm.customer_phone}
+                                                onChange={(e) => setManualInvoiceForm({ ...manualInvoiceForm, customer_phone: e.target.value })}
+                                                className="w-full h-10 border border-outline rounded-lg text-xs px-3 bg-surface font-semibold"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-outline uppercase" htmlFor="man-cust-gstin">Customer GSTIN (Optional)</label>
+                                            <input
+                                                id="man-cust-gstin"
+                                                type="text"
+                                                placeholder="e.g. 27BBBBB2222B2Z2"
+                                                value={manualInvoiceForm.customer_gstin}
+                                                onChange={(e) => setManualInvoiceForm({ ...manualInvoiceForm, customer_gstin: e.target.value })}
+                                                className="w-full h-10 border border-outline rounded-lg text-xs px-3 bg-surface font-semibold uppercase"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-xs font-bold text-outline uppercase" htmlFor="man-shop-gstin">Shop GSTIN *</label>
+                                            <input
+                                                id="man-shop-gstin"
+                                                type="text"
+                                                value={manualInvoiceForm.shop_gstin}
+                                                onChange={(e) => setManualInvoiceForm({ ...manualInvoiceForm, shop_gstin: e.target.value })}
+                                                className="w-full h-10 border border-outline rounded-lg text-xs px-3 bg-surface font-semibold"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-outline uppercase" htmlFor="man-billing-addr">Billing Address *</label>
+                                        <textarea
+                                            id="man-billing-addr"
+                                            rows="2"
+                                            placeholder="Full Billing and Dispatch Address..."
+                                            value={manualInvoiceForm.billing_address}
+                                            onChange={(e) => setManualInvoiceForm({ ...manualInvoiceForm, billing_address: e.target.value })}
+                                            className="w-full border border-outline rounded-lg text-xs p-2.5 bg-surface font-semibold"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Financial parameters */}
+                                <div className="grid grid-cols-3 gap-3 bg-surface-container p-4 rounded-xl border border-outline-variant/60">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-outline uppercase" htmlFor="man-labor">Labor Charges (₹) *</label>
+                                        <input
+                                            id="man-labor"
+                                            type="number"
+                                            step="0.01"
+                                            value={manualInvoiceForm.labor_charges}
+                                            onChange={(e) => setManualInvoiceForm({ ...manualInvoiceForm, labor_charges: e.target.value })}
+                                            className="w-full h-10 border border-outline rounded-lg text-xs px-3 bg-surface font-bold text-primary"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-outline uppercase" htmlFor="man-pay-method">Payment Method</label>
+                                        <select
+                                            id="man-pay-method"
+                                            value={manualInvoiceForm.payment_method}
+                                            onChange={(e) => setManualInvoiceForm({ ...manualInvoiceForm, payment_method: e.target.value })}
+                                            className="w-full h-10 border border-outline rounded-lg text-xs bg-surface px-2 font-bold"
+                                        >
+                                            <option value="upi">UPI / QR Code</option>
+                                            <option value="cash">Cash Settlement</option>
+                                            <option value="card">Debit/Credit Card</option>
+                                            <option value="net_banking">Net Banking</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-outline uppercase" htmlFor="man-pay-status">Payment Status</label>
+                                        <select
+                                            id="man-pay-status"
+                                            value={manualInvoiceForm.payment_status}
+                                            onChange={(e) => setManualInvoiceForm({ ...manualInvoiceForm, payment_status: e.target.value })}
+                                            className="w-full h-10 border border-outline rounded-lg text-xs bg-surface px-2 font-bold"
+                                        >
+                                            <option value="paid">Paid & Settled</option>
+                                            <option value="unpaid">Unpaid / Outstanding</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Manually Itemized Parts */}
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <h4 className="font-bold text-xs text-primary uppercase tracking-wider">Itemized Spares & Goods</h4>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setManualInvoiceForm({
+                                                    ...manualInvoiceForm,
+                                                    items: [...manualInvoiceForm.items, { name: "", hsn: "85177900", price: "0.00", qty: 1, gst_rate: 18 }]
+                                                });
+                                            }}
+                                            className="h-8 px-3 bg-secondary/15 text-secondary border border-secondary/20 hover:bg-secondary/25 rounded-lg font-bold text-[11px] flex items-center gap-1 active:scale-95 transition-all"
+                                        >
+                                            <span className="material-symbols-outlined text-[14px]">add</span>
+                                            <span>Add Itemized Line</span>
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {manualInvoiceForm.items.length === 0 ? (
+                                            <p className="text-xs text-outline text-center py-4 bg-surface border border-outline-variant/40 rounded-xl font-semibold">No manually itemized parts added yet. Click "+ Add Itemized Line" above to add spares.</p>
+                                        ) : (
+                                            manualInvoiceForm.items.map((item, idx) => (
+                                                <div key={idx} className="bg-surface border border-outline-variant rounded-xl p-3 grid grid-cols-12 gap-2 items-center relative animate-fadeIn shadow-sm">
+                                                    <div className="col-span-4 space-y-1">
+                                                        <label className="text-[9px] font-bold text-outline uppercase block">Part Description</label>
+                                                        <input 
+                                                            type="text"
+                                                            placeholder="iPhone OLED Screen"
+                                                            value={item.name}
+                                                            onChange={(e) => {
+                                                                const updated = [...manualInvoiceForm.items];
+                                                                updated[idx].name = e.target.value;
+                                                                setManualInvoiceForm({ ...manualInvoiceForm, items: updated });
+                                                            }}
+                                                            className="w-full h-8 border border-outline rounded-lg text-xs px-2 bg-surface"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-2 space-y-1">
+                                                        <label className="text-[9px] font-bold text-outline uppercase block">HSN/SAC</label>
+                                                        <input 
+                                                            type="text"
+                                                            placeholder="85177900"
+                                                            value={item.hsn}
+                                                            onChange={(e) => {
+                                                                const updated = [...manualInvoiceForm.items];
+                                                                updated[idx].hsn = e.target.value;
+                                                                setManualInvoiceForm({ ...manualInvoiceForm, items: updated });
+                                                            }}
+                                                            className="w-full h-8 border border-outline rounded-lg text-xs px-1 text-center bg-surface font-mono"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-2 space-y-1">
+                                                        <label className="text-[9px] font-bold text-outline uppercase block">Unit Price (₹)</label>
+                                                        <input 
+                                                            type="number"
+                                                            step="0.01"
+                                                            value={item.price}
+                                                            onChange={(e) => {
+                                                                const updated = [...manualInvoiceForm.items];
+                                                                updated[idx].price = e.target.value;
+                                                                setManualInvoiceForm({ ...manualInvoiceForm, items: updated });
+                                                            }}
+                                                            className="w-full h-8 border border-outline rounded-lg text-xs px-2 bg-surface font-bold text-primary"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-2 space-y-1">
+                                                        <label className="text-[9px] font-bold text-outline uppercase block">Qty</label>
+                                                        <input 
+                                                            type="number"
+                                                            value={item.qty}
+                                                            onChange={(e) => {
+                                                                const updated = [...manualInvoiceForm.items];
+                                                                updated[idx].qty = parseInt(e.target.value) || 1;
+                                                                setManualInvoiceForm({ ...manualInvoiceForm, items: updated });
+                                                            }}
+                                                            className="w-full h-8 border border-outline rounded-lg text-xs px-1 text-center bg-surface"
+                                                            required
+                                                        />
+                                                    </div>
+                                                    <div className="col-span-2 flex justify-center pt-4">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const updated = manualInvoiceForm.items.filter((_, i) => i !== idx);
+                                                                setManualInvoiceForm({ ...manualInvoiceForm, items: updated });
+                                                            }}
+                                                            className="h-8 w-8 bg-error/10 text-error border border-error/20 hover:bg-error/25 rounded-lg flex items-center justify-center active:scale-95 transition-transform"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Live dynamic computational breakdown */}
+                                <div className="bg-surface-container p-4 rounded-xl border border-outline-variant text-[12px] font-bold space-y-2">
+                                    {(() => {
+                                        const laborVal = parseFloat(manualInvoiceForm.labor_charges || 0);
+                                        const sparesVal = manualInvoiceForm.items.reduce((sum, item) => sum + (parseFloat(item.price || 0) * (item.qty || 1)), 0);
+                                        const subtotal = laborVal + sparesVal;
+                                        
+                                        // 18% standard GST breakdown
+                                        const totalGst = subtotal * 0.18;
+                                        const cgst = totalGst / 2;
+                                        const sgst = totalGst / 2;
+                                        const grandTotal = subtotal + totalGst;
+
+                                        return (
+                                            <>
+                                                <div className="flex justify-between">
+                                                    <span className="text-on-surface-variant font-medium">Subtotal (Labor + manual Items):</span>
+                                                    <span>₹{subtotal.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-outline">
+                                                    <span className="font-medium">CGST (9.00%):</span>
+                                                    <span>₹{cgst.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-outline">
+                                                    <span className="font-medium">SGST (9.00%):</span>
+                                                    <span>₹{sgst.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm text-primary border-t border-outline-variant pt-2">
+                                                    <span>Grand Total (GST Inc.):</span>
+                                                    <span>₹{grandTotal.toFixed(2)}</span>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
+                                </div>
+
+                                <div className="flex gap-2 pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowManualInvoiceModal(false)}
+                                        className="flex-1 h-11 bg-surface-container border border-outline hover:bg-surface-container-high rounded-lg font-bold text-sm active:scale-95 transition-transform"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="flex-1 h-11 bg-secondary text-on-secondary hover:bg-secondary-container rounded-lg font-bold text-sm shadow active:scale-95 transition-transform flex items-center justify-center gap-1.5"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">verified_user</span>
+                                        <span>Compile & Print GST PDF</span>
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
                 {/* ── GST INVOICE PRINT PREVIEW MODAL ── */}
                 {showInvoicePreviewModal && selectedPreviewInvoice && (() => {
                     const inv = selectedPreviewInvoice;
@@ -2815,6 +3738,22 @@ export default function Dashboard() {
                     const laborTaxable = parseFloat(inv.labor_charges || 0);
                     const laborGst = laborTaxable * 0.18;
                     const branchObj = branches.find(b => b.id === ticketObj.branch) || {};
+
+                    const isManual = !inv.ticket;
+                    let manualItems = [];
+                    let customerName = ticketObj.customer_username || 'Valued Customer';
+                    let customerPhone = ticketObj.customer_phone || 'N/A';
+
+                    if (isManual) {
+                        try {
+                            const parsed = JSON.parse(inv.manual_items || "{}");
+                            manualItems = parsed.items || [];
+                            customerName = parsed.customer_name || "Valued Customer";
+                            customerPhone = parsed.customer_phone || "N/A";
+                        } catch (err) {
+                            console.error("Manual parse error", err);
+                        }
+                    }
 
                     return (
                         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto no-print">
@@ -2854,8 +3793,8 @@ export default function Dashboard() {
                                         <div>
                                             <h1 className="text-2xl font-extrabold text-primary tracking-wide">RepairBharat</h1>
                                             <p className="text-xs font-semibold text-gray-500 uppercase mt-0.5">Physical Franchise Workshop</p>
-                                            <p className="text-xs font-bold text-gray-700 mt-2">{branchObj.name || 'RepairBharat Dadar Branch'}</p>
-                                            <p className="text-xs text-gray-600 max-w-[280px] mt-0.5">{branchObj.address || 'Dadar, Mumbai, Maharashtra'}</p>
+                                            <p className="text-xs font-bold text-gray-700 mt-2">{branchObj.name || 'RepairBharat Corporate Franchise'}</p>
+                                            <p className="text-xs text-gray-600 max-w-[280px] mt-0.5">{branchObj.address || 'Mumbai, Maharashtra, India'}</p>
                                             <p className="text-xs font-bold text-gray-700 mt-2">GSTIN: {inv.shop_gstin || '27AAAAA1111A1Z1'}</p>
                                         </div>
                                         <div className="text-right">
@@ -2873,8 +3812,8 @@ export default function Dashboard() {
                                     <div className="grid grid-cols-2 gap-6 py-6 border-b border-gray-200">
                                         <div>
                                             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Billed To (Recipient)</h3>
-                                            <p className="text-sm font-bold text-gray-800">{ticketObj.customer_username || 'Valued Customer'}</p>
-                                            <p className="text-xs text-gray-600 font-semibold mt-1">Phone: {ticketObj.customer_phone || 'N/A'}</p>
+                                            <p className="text-sm font-bold text-gray-800">{customerName}</p>
+                                            <p className="text-xs text-gray-600 font-semibold mt-1">Phone: {customerPhone}</p>
                                             <p className="text-xs text-gray-600 mt-2 whitespace-pre-wrap"><strong className="font-bold">Address:</strong> {inv.billing_address || 'Mumbai, Maharashtra'}</p>
                                             {inv.customer_gstin && (
                                                 <p className="text-xs font-bold text-primary mt-2">Customer GSTIN: {inv.customer_gstin}</p>
@@ -2918,7 +3857,7 @@ export default function Dashboard() {
                                                     <td className="py-3">1</td>
                                                     <td className="py-3">
                                                         <p className="font-bold text-gray-800">Technical Hardware Labor Fees</p>
-                                                        <p className="text-[10px] text-gray-500">Service ticket number: {inv.ticket_number}</p>
+                                                        <p className="text-[10px] text-gray-500">{isManual ? 'Manual custom billing charges' : `Service ticket number: ${inv.ticket_number}`}</p>
                                                     </td>
                                                     <td className="py-3 text-center font-mono">998729</td>
                                                     <td className="py-3 text-right">₹{laborTaxable.toFixed(2)}</td>
@@ -2928,29 +3867,53 @@ export default function Dashboard() {
                                                     <td className="py-3 text-right font-semibold">₹{(laborTaxable * 1.18).toFixed(2)}</td>
                                                 </tr>
                                                 
-                                                {/* Calculated Spares */}
-                                                {(() => {
-                                                    const totalSparesWithTax = parseFloat(inv.grand_total) - (laborTaxable * 1.18);
-                                                    if (totalSparesWithTax > 0.01) {
-                                                        const sparesTaxable = totalSparesWithTax / 1.18;
+                                                {/* Manual Items or Calculated Spares */}
+                                                {isManual ? (
+                                                    manualItems.map((item, idx) => {
+                                                        const price = parseFloat(item.price || 0);
+                                                        const qty = parseInt(item.qty || 1);
+                                                        const itemTotal = price * qty;
+                                                        const itemGst = itemTotal * 0.18;
                                                         return (
-                                                            <tr className="border-b border-gray-200">
-                                                                <td className="py-3">2</td>
+                                                            <tr key={idx} className="border-b border-gray-200">
+                                                                <td className="py-3">{idx + 2}</td>
                                                                 <td className="py-3">
-                                                                    <p className="font-bold text-gray-800">Spare Parts Kit Consumed</p>
-                                                                    <p className="text-[10px] text-gray-500">Inventory parts replacement kit</p>
+                                                                    <p className="font-bold text-gray-800">{item.name}</p>
+                                                                    <p className="text-[10px] text-gray-500">Custom spare parts kits</p>
                                                                 </td>
-                                                                <td className="py-3 text-center font-mono">85177900</td>
-                                                                <td className="py-3 text-right">₹{sparesTaxable.toFixed(2)}</td>
+                                                                <td className="py-3 text-center font-mono">{item.hsn || '85177900'}</td>
+                                                                <td className="py-3 text-right">₹{itemTotal.toFixed(2)}</td>
                                                                 <td className="py-3 text-center">18%</td>
-                                                                <td className="py-3 text-right">₹{(sparesTaxable * 0.09).toFixed(2)}</td>
-                                                                <td className="py-3 text-right">₹{(sparesTaxable * 0.09).toFixed(2)}</td>
-                                                                <td className="py-3 text-right font-semibold">₹{totalSparesWithTax.toFixed(2)}</td>
+                                                                <td className="py-3 text-right">₹{(itemGst / 2).toFixed(2)}</td>
+                                                                <td className="py-3 text-right">₹{(itemGst / 2).toFixed(2)}</td>
+                                                                <td className="py-3 text-right font-semibold">₹{(itemTotal + itemGst).toFixed(2)}</td>
                                                             </tr>
                                                         );
-                                                    }
-                                                    return null;
-                                                })()}
+                                                    })
+                                                ) : (
+                                                    (() => {
+                                                        const totalSparesWithTax = parseFloat(inv.grand_total) - (laborTaxable * 1.18);
+                                                        if (totalSparesWithTax > 0.01) {
+                                                            const sparesTaxable = totalSparesWithTax / 1.18;
+                                                            return (
+                                                                <tr className="border-b border-gray-200">
+                                                                    <td className="py-3">2</td>
+                                                                    <td className="py-3">
+                                                                        <p className="font-bold text-gray-800">Spare Parts Kit Consumed</p>
+                                                                        <p className="text-[10px] text-gray-500">Inventory parts replacement kit</p>
+                                                                    </td>
+                                                                    <td className="py-3 text-center font-mono">85177900</td>
+                                                                    <td className="py-3 text-right">₹{sparesTaxable.toFixed(2)}</td>
+                                                                    <td className="py-3 text-center">18%</td>
+                                                                    <td className="py-3 text-right">₹{(sparesTaxable * 0.09).toFixed(2)}</td>
+                                                                    <td className="py-3 text-right">₹{(sparesTaxable * 0.09).toFixed(2)}</td>
+                                                                    <td className="py-3 text-right font-semibold">₹{totalSparesWithTax.toFixed(2)}</td>
+                                                                </tr>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })()
+                                                )}
                                             </tbody>
                                         </table>
                                     </div>
@@ -3041,6 +4004,71 @@ export default function Dashboard() {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* ── TICKET CREATED SUCCESS & QR CODE MODAL ── */}
+                {showSuccessQrModal && successTicketNumber && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+                        <div className="bg-surface rounded-xl border border-outline-variant shadow-md p-6 max-w-md w-full relative animate-scaleIn text-center">
+                            <div className="flex justify-between items-center pb-3 border-b border-outline-variant mb-4">
+                                <h3 className="font-bold text-lg text-primary flex items-center gap-1.5">
+                                    <span className="material-symbols-outlined text-success">check_circle</span>
+                                    <span>QR Code Telemetry Tracker</span>
+                                </h3>
+                                <button onClick={() => setShowSuccessQrModal(false)} className="text-on-surface hover:text-primary">
+                                    <span className="material-symbols-outlined text-[24px]">close</span>
+                                </button>
+                            </div>
+
+                            <div className="space-y-4 flex flex-col items-center">
+                                <p className="text-xs text-on-surface-variant font-semibold text-left">
+                                    Hardware repair ticket for <strong className="text-primary">{successDeviceName}</strong> is registered under unique telemetry log reference:
+                                </p>
+                                
+                                <div className="bg-surface-container-high px-4 py-2 rounded-lg font-mono text-sm font-bold text-primary select-all">
+                                    {successTicketNumber}
+                                </div>
+
+                                <div className="bg-white p-3 rounded-xl border border-outline shadow-sm">
+                                    <img 
+                                        src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${window.location.origin}/track/${successTicketNumber}`)}`} 
+                                        alt="Telemetry QR Code" 
+                                        className="w-48 h-48"
+                                    />
+                                </div>
+
+                                <p className="text-[11px] text-outline font-medium text-center leading-relaxed">
+                                    Scan this QR code to access real-time workstation status, image diagnostics, and technician pipeline updates without any auth credentials.
+                                </p>
+
+                                <div className="flex gap-2 w-full pt-2">
+                                    <a 
+                                        href={`${window.location.origin}/track/${successTicketNumber}`} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer" 
+                                        className="flex-1 h-10 border border-outline text-on-surface font-bold text-xs rounded-lg flex items-center justify-center gap-1 hover:bg-surface-container active:scale-95 transition-all"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">visibility</span>
+                                        <span>Open Tracker</span>
+                                    </a>
+                                    <button 
+                                        onClick={() => {
+                                            const url = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(`${window.location.origin}/track/${successTicketNumber}`)}`;
+                                            const link = document.createElement("a");
+                                            link.href = url;
+                                            link.target = "_blank";
+                                            link.download = `QR-${successTicketNumber}.png`;
+                                            link.click();
+                                        }}
+                                        className="flex-1 h-10 bg-primary text-on-primary font-bold text-xs rounded-lg flex items-center justify-center gap-1 active:scale-95 transition-all shadow"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">download</span>
+                                        <span>Download QR</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

@@ -3,7 +3,7 @@ from .models import GSTInvoice
 
 
 class GSTInvoiceSerializer(serializers.ModelSerializer):
-    ticket_number = serializers.CharField(source="ticket.ticket_number", read_only=True)
+    ticket_number = serializers.SerializerMethodField()
     device = serializers.SerializerMethodField()
 
     class Meta:
@@ -11,5 +11,12 @@ class GSTInvoiceSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ("id", "invoice_number", "created_at")
 
+    def get_ticket_number(self, obj):
+        if obj.ticket:
+            return obj.ticket.ticket_number
+        return "N/A"
+
     def get_device(self, obj):
-        return f"{obj.ticket.device_brand} {obj.ticket.device_model}"
+        if obj.ticket and obj.ticket.device:
+            return f"{obj.ticket.device.brand} {obj.ticket.device.model}"
+        return "Manual Invoice"

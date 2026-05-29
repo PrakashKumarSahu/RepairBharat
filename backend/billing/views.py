@@ -25,6 +25,7 @@ class GSTInvoiceListCreateView(generics.ListCreateAPIView):
         return queryset.order_by("-created_at")
 
     def create(self, request, *args, **kwargs):
+        import json
         ticket_id = request.data.get("ticket")
         labor_charges = Decimal(request.data.get("labor_charges", "0.00"))
         labor_gst_rate = Decimal(request.data.get("labor_gst_rate", "18.00"))
@@ -35,36 +36,71 @@ class GSTInvoiceListCreateView(generics.ListCreateAPIView):
         shop_gstin = request.data.get("shop_gstin", "27AAAAA1111A1Z1")
         customer_gstin = request.data.get("customer_gstin", "")
         billing_address = request.data.get("billing_address", "")
+        manual_items = request.data.get("manual_items", "[]")
 
-        spares_used = request.data.get("spares_used", [])
+        # Handle manual items serialization
+        manual_items_str = "[]"
+        if manual_items:
+            if isinstance(manual_items, list) or isinstance(manual_items, dict):
+                manual_items_str = json.dumps(manual_items)
+            else:
+                manual_items_str = str(manual_items)
 
-        try:
-            ticket = RepairOrder.objects.get(id=ticket_id)
-        except RepairOrder.DoesNotExist:
-            return Response({"detail": "Ticket not found"}, status=status.HTTP_404_NOT_FOUND)
+        ticket = None
+        if ticket_id:
+            try:
+                ticket = RepairOrder.objects.get(id=ticket_id)
+            except RepairOrder.DoesNotExist:
+                return Response({"detail": "Ticket not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        if GSTInvoice.objects.filter(ticket=ticket).exists():
-            return Response({"detail": "Invoice already exists for this ticket"}, status=status.HTTP_400_BAD_REQUEST)
+            if GSTInvoice.objects.filter(ticket=ticket).exists():
+                return Response({"detail": "Invoice already exists for this ticket"}, status=status.HTTP_400_BAD_REQUEST)
 
         # 1. Spares cost calculation + stock deduction
         spares_total = Decimal("0.00")
         spares_gst = Decimal("0.00")
 
-        for s in spares_used:
+        if ticket:
+            spares_used = request.data.get("spares_used", [])
+            for s in spares_used:
+                try:
+                    item = InventoryItem.objects.get(id=s["id"])
+                    qty = int(s["quantity"])
+                    if item.stock_level >= qty:
+                        item.stock_level -= qty
+                        item.save()
+                        
+                        cost = item.selling_price * qty
+                        gst_part = cost * (item.gst_rate / Decimal("100.00"))
+                        spares_total += cost
+                        spares_gst += gst_part
+                    else:
+                        return Response({"detail": f"Insufficient stock for {item.name}"}, status=status.HTTP_400_BAD_REQUEST)
+                except InventoryItem.DoesNotExist:
+                    pass
+        else:
+            # Calculate manual spares list
             try:
-                item = InventoryItem.objects.get(id=s["id"])
-                qty = int(s["quantity"])
-                if item.stock_level >= qty:
-                    item.stock_level -= qty
-                    item.save()
+                if isinstance(manual_items, str):
+                    parsed_items = json.loads(manual_items)
+                else:
+                    parsed_items = manual_items
+                
+                if isinstance(parsed_items, dict):
+                    items_list = parsed_items.get("items", [])
+                else:
+                    items_list = parsed_items
+                
+                for item in items_list:
+                    price = Decimal(str(item.get("price", "0.00")))
+                    qty = int(item.get("qty", 1))
+                    gst_rate = Decimal(str(item.get("gst_rate", "18.00")))
                     
-                    cost = item.selling_price * qty
-                    gst_part = cost * (item.gst_rate / Decimal("100.00"))
+                    cost = price * qty
+                    gst_part = cost * (gst_rate / Decimal("100.00"))
                     spares_total += cost
                     spares_gst += gst_part
-                else:
-                    return Response({"detail": f"Insufficient stock for {item.name}"}, status=status.HTTP_400_BAD_REQUEST)
-            except InventoryItem.DoesNotExist:
+            except Exception as e:
                 pass
 
         # 2. Labor tax calculation
@@ -90,19 +126,21 @@ class GSTInvoiceListCreateView(generics.ListCreateAPIView):
             payment_method=payment_method,
             shop_gstin=shop_gstin,
             customer_gstin=customer_gstin,
-            billing_address=billing_address
+            billing_address=billing_address,
+            manual_items=manual_items_str
         )
 
         # Invoice Ninja integration disabled per user request
         pass
 
-        # Update repair ticket status to delivered/ready using WorkflowStage lookup
-        target_code = "delivered" if payment_status == "paid" else "ready"
-        stage_obj = WorkflowStage.objects.filter(code=target_code).first()
-        if stage_obj:
-            ticket.status = stage_obj
-        ticket.estimated_cost = grand_total
-        ticket.save()
+        # Update repair ticket status to delivered/ready using WorkflowStage lookup if ticket exists
+        if ticket:
+            target_code = "delivered" if payment_status == "paid" else "ready"
+            stage_obj = WorkflowStage.objects.filter(code=target_code).first()
+            if stage_obj:
+                ticket.status = stage_obj
+            ticket.estimated_cost = grand_total
+            ticket.save()
 
         serializer = self.get_serializer(invoice)
         return Response(serializer.data, status=status.HTTP_201_CREATED)

@@ -51,6 +51,7 @@ class RepairOrder(TimeStampedModel):
     )
     estimated_cost = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     advance_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    device_image = models.TextField(blank=True, null=True)
 
     def save(self, *args, **kwargs):
         if not self.ticket_number:

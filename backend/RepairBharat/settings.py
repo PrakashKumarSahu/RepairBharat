@@ -148,6 +148,4 @@ CORS_ALLOW_CREDENTIALS = True
 AUTH_USER_MODEL = 'accounts.CustomUser'
 STATIC_URL = 'static/'
 
-# InvoiceNinja Integration Settings (Sandbox default)
-INVOICENINJA_URL = "https://demo.invoiceninja.com"
-INVOICENINJA_API_KEY = "demo_token"
+# Printable GST Invoices & B2B Billing configuration

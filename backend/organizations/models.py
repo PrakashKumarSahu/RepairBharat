@@ -32,6 +32,9 @@ class Branch(TimeStampedModel):
         help_text="Comma separated specialties"
     )
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=4.5)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, default=19.0760)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, default=72.8777)
+    gst_number = models.CharField(max_length=50, blank=True, default="27AAAAA1111A1Z1")
 
     def __str__(self):
         return f"{self.name} ({self.city})"

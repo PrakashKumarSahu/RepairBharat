@@ -16,7 +16,9 @@ class GSTInvoice(models.Model):
 
     ticket = models.OneToOneField(
         RepairOrder,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="invoice"
     )
     invoice_number = models.CharField(max_length=50, unique=True, editable=False)
@@ -36,13 +38,12 @@ class GSTInvoice(models.Model):
         choices=PaymentMethods.choices,
         default=PaymentMethods.UPI
     )
-    invoice_ninja_id = models.CharField(max_length=100, blank=True, null=True)
-    invoice_ninja_url = models.URLField(max_length=500, blank=True, null=True)
     
     # GST Compliant Physical Billing Fields
     shop_gstin = models.CharField(max_length=15, default="27AAAAA1111A1Z1")
     customer_gstin = models.CharField(max_length=15, blank=True, null=True)
     billing_address = models.TextField(blank=True, null=True)
+    manual_items = models.TextField(blank=True, null=True, default="[]")
 
     created_at = models.DateTimeField(auto_now_add=True)
 
