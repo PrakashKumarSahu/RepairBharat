@@ -5,6 +5,9 @@ const getApiUrl = () => {
         return import.meta.env.VITE_API_URL;
     }
     if (typeof window !== "undefined" && window.location) {
+        if (window.location.port === "8001" || window.location.port === "80" || window.location.port === "") {
+            return "";
+        }
         return `http://${window.location.hostname}:8000`;
     }
     return "http://localhost:8000";

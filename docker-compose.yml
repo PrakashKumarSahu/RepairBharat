@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:17
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    env_file:
+      - .env.prod
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: django-backend
+    restart: always
+    depends_on:
+      - db
+    volumes:
+      - django_static:/app/staticfiles
+    env_file:
+      - .env.prod
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx.Dockerfile
+    container_name: nginx-proxy
+    restart: always
+    ports:
+      - "8001:80"
+    volumes:
+      - django_static:/static:ro
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  django_static:

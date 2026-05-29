@@ -1,0 +1,26 @@
+# Git
+.git/
+.gitignore
+
+# Virtual Envs & Python Caches
+backend/venv/
+backend/env/
+backend/__pycache__/
+backend/*.pyc
+
+# Node Modules & Frontend Builds
+frontend/node_modules/
+frontend/dist/
+frontend/.cache/
+
+# Local databases
+backend/*.sqlite3
+
+# Docker environments
+.env
+.env.*
+.dockerignore
+Dockerfile
+nginx.Dockerfile
+docker-compose*
+nginx.conf
