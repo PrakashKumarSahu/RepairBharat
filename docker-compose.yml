@@ -2,12 +2,14 @@ services:
   db:
     image: postgres:17
     restart: always
+    # SECURE: Only bind Postgres to localhost (127.0.0.1) to prevent unauthorized public access from the internet.
+    # If database administration from the host is not needed, you can comment this out entirely.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     env_file:
-      - .env.prod
+      - ./backend/.env.prod
 
   backend:
     build:
@@ -20,16 +22,18 @@ services:
     volumes:
       - django_static:/app/staticfiles
     env_file:
-      - .env.prod
+      - ./backend/.env.prod
 
   nginx:
     build:
-      context: .
-      dockerfile: nginx.Dockerfile
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: nginx-proxy
     restart: always
+    # Configurable port mapping: Defaults to port 8001 on the host, but can be overridden by a PORT environment variable.
+    # Change to "80:80" or "443:443" for direct production web hosting.
     ports:
-      - "8001:80"
+      - "${PORT:-8001}:80"
     volumes:
       - django_static:/static:ro
     depends_on:

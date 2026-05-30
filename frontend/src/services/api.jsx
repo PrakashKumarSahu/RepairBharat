@@ -4,6 +4,10 @@ const getApiUrl = () => {
     if (import.meta.env.VITE_API_URL) {
         return import.meta.env.VITE_API_URL;
     }
+    // If in production build, default to relative paths to support Nginx routing seamlessly
+    if (import.meta.env.PROD) {
+        return "";
+    }
     if (typeof window !== "undefined" && window.location) {
         if (window.location.port === "8001" || window.location.port === "80" || window.location.port === "") {
             return "";
