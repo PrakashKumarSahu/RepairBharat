@@ -24,7 +24,7 @@ services:
     env_file:
       - ./backend/.env.prod
 
-  nginx:
+  frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile

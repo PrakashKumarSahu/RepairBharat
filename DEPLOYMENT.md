@@ -10,18 +10,18 @@ The production environment is orchestrated using multi-container Docker services
 
 1. **Database Service (`db`)**: Runs a secured **PostgreSQL 17** engine, with its storage persisted inside a Docker volume (`postgres_data`). For safety, its port is bound only to `127.0.0.1` (localhost), preventing direct exposure to the public internet.
 2. **Backend Service (`backend`)**: A high-performance **Django DRF** application running under **Gunicorn** with 3 worker processes.
-3. **Nginx/Frontend Service (`nginx`)**: Serves the fully optimized, production-compiled **React SPA bundle** and acts as a reverse proxy, routing `/api/`, `/accounts/`, and `/admin/` requests directly to the Django backend. It also serves Django's backend static files using a shared Docker volume (`django_static`).
+3. **Frontend Service (`frontend`)**: Serves the fully optimized, production-compiled **React SPA bundle** and acts as a reverse proxy, routing `/api/`, `/accounts/`, and `/admin/` requests directly to the Django backend. It also serves Django's backend static files using a shared Docker volume (`django_static`).
 
 ```mermaid
 graph TD
     Client[Web Browser / Client] -->|HTTPS Port 443| HostNginx[Host OS Nginx + SSL]
-    HostNginx -->|Proxy Pass Port 8001| DockerNginx[Docker Nginx Container]
+    HostNginx -->|Proxy Pass Port 8001| DockerFrontend[Docker Frontend Container]
     
     subgraph Docker Bridge Network
-        DockerNginx -->|1. Static Assets| ReactSPA[Vite React SPA Build]
-        DockerNginx -->|2. Proxy API requests /api| Django[Django Backend & Gunicorn]
+        DockerFrontend -->|1. Static Assets| ReactSPA[Vite React SPA Build]
+        DockerFrontend -->|2. Proxy API requests /api| Django[Django Backend & Gunicorn]
         Django -->|3. Save Static Files| Vol[Shared django_static Volume]
-        DockerNginx -->|4. Read Admin Static| Vol
+        DockerFrontend -->|4. Read Admin Static| Vol
         Django -->|5. SQL Queries| Postgres[(PostgreSQL 17 Database)]
     end
 ```
@@ -246,8 +246,8 @@ docker compose logs -f
 # Read only backend logs
 docker compose logs -f backend
 
-# Read only Nginx routing/proxy logs
-docker compose logs -f nginx
+# Read only frontend routing/proxy logs
+docker compose logs -f frontend
 ```
 
 ### Common Pitfall: `CSRF verification failed` (Forbidden 403)
