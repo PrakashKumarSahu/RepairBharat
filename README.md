@@ -1,4 +1,4 @@
-See live website - quikx.live
+See live website - [quikx.live](https://quikx.live/login)
 # 🛠️ RepairBharat - Enterprise Decoupled B2C & B2B Repair Operating System
 
 RepairBharat is a production-grade, multi-franchise "Repair Operating System" designed to optimize, track, and scale electronic device repair services across India. Seamlessly connecting B2C Customers, B2B Shop Owners, and Bench Technicians, the platform supports real-time Kanban milestone pipeline transition rules, automated spares inventory warnings, and CGST/SGST-compliant billing.
