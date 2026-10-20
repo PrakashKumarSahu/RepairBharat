@@ -7,6 +7,7 @@ from devices.models import Device
 from workflow.models import WorkflowStage
 from providers.models import Technician
 from core.permissions import IsOwnerOfRepairOrder
+from core.audit import log_action
 
 
 class RepairOrderListCreateView(generics.ListCreateAPIView):
@@ -123,6 +124,16 @@ class RepairOrderListCreateView(generics.ListCreateAPIView):
             estimated_cost=cost,
             advance_paid=advance,
             device_image=device_image
+        )
+
+        repair_order = order
+        log_action(
+            user=customer_user,
+            action='ticket.create',
+            resource_type='RepairOrder',
+            resource_id=repair_order.id,
+            metadata={'ticket_number': repair_order.ticket_number},
+            request=request,
         )
 
         # Log initial stage

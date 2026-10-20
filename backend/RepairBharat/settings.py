@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     'devices',
     'workflow',
     'repairs',
+    'notifications',
+    'analytics',
 ]
 
 MIDDLEWARE = [
@@ -154,3 +156,6 @@ STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Printable GST Invoices & B2B Billing configuration
+
+# Fast2SMS integration (set via environment variable in production)
+FAST2SMS_API_KEY = os.environ.get('FAST2SMS_API_KEY', '')

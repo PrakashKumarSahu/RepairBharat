@@ -7,6 +7,7 @@ from workflow.models import WorkflowStage
 from inventory.models import InventoryItem
 from decimal import Decimal
 from core.permissions import IsOwnerOfInvoice
+from core.audit import log_action
 
 
 class GSTInvoiceListCreateView(generics.ListCreateAPIView):
@@ -129,6 +130,14 @@ class GSTInvoiceListCreateView(generics.ListCreateAPIView):
             customer_gstin=customer_gstin,
             billing_address=billing_address,
             manual_items=manual_items_str
+        )
+
+        log_action(
+            user=request.user,
+            action='invoice.create',
+            resource_type='GSTInvoice',
+            resource_id=invoice.id,
+            request=request,
         )
 
         # Invoice Ninja integration disabled per user request
