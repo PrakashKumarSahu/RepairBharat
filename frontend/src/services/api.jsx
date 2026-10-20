@@ -104,7 +104,13 @@ export const fetchCustomers = async () => {
 };
 
 // ── Organizations / Decoupled Branches APIs ──
-export const fetchBranches = async (filters = {}) => {
+/**
+ * Fetches branches and calculates real distances using the Haversine formula.
+ * @param {Object} filters - Optional filters: city, specialty, search, all, repair_type
+ * @param {Object|null} userCoords - User's GPS position: { lat, lng }.
+ *                                   Falls back to Mumbai (19.0760, 72.8777) when null.
+ */
+export const fetchBranches = async (filters = {}, userCoords = null) => {
     const url = `${getApiUrl()}/api/orgs/branches/`;
     const params = new URLSearchParams();
     if (filters.city) params.append("city", filters.city);
@@ -115,61 +121,55 @@ export const fetchBranches = async (filters = {}) => {
     const response = await axios.get(`${url}?${params.toString()}`);
     let data = response.data;
 
-    // Apply Google Places API distance & rating simulation if Google Maps key isn't provided
-    // This sandbox is highly robust, standard, and easy to maintain
-    const userLat = 19.0760; // Mumbai Latitude
-    const userLng = 72.8777; // Mumbai Longitude
+    // Use the actual user GPS position if provided, otherwise fall back to Mumbai
+    const userLat = userCoords?.lat ?? 19.0760;
+    const userLng = userCoords?.lng ?? 72.8777;
 
-    data = data.map((b, index) => {
-        // Calculate simulated coordinate displacements
-        const latOffset = (index * 0.015) + 0.005;
-        const lngOffset = (index * -0.012) - 0.008;
-        const branchLat = userLat + latOffset;
-        const branchLng = userLng + lngOffset;
+    data = data.map((b) => {
+        // Use real branch coordinates from the database (set when branch is registered)
+        const branchLat = parseFloat(b.latitude) || userLat;
+        const branchLng = parseFloat(b.longitude) || userLng;
 
-        // Spherical law of cosines for distance approximation in km
-        const R = 6371; // Earth radius in km
+        // Haversine formula for accurate great-circle distance in km
+        const R = 6371;
         const dLat = (branchLat - userLat) * Math.PI / 180;
         const dLng = (branchLng - userLng) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(userLat * Math.PI / 180) * Math.cos(branchLat * Math.PI / 180) *
-                  Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(userLat * Math.PI / 180) *
+            Math.cos(branchLat * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         const distance = R * c;
 
-        // Assign rating: first shops get high ratings, later ones get lower reviews/ratings
-        let rating = 4.9 - (index * 0.25);
-        if (rating < 2.5) rating = 2.5 + (index % 3) * 0.4;
-        rating = Math.min(5.0, Math.max(1.0, parseFloat(rating.toFixed(1))));
-
         return {
             ...b,
-            latitude: parseFloat(branchLat.toFixed(6)),
-            longitude: parseFloat(branchLng.toFixed(6)),
+            latitude: branchLat,
+            longitude: branchLng,
             distance: parseFloat(distance.toFixed(1)),
-            rating: rating,
-            reviews_count: 12 + index * 18
+            // Prefer rating from the API (may be enriched by Google Places on the backend)
+            rating: parseFloat(b.rating) || 4.5,
+            reviews_count: b.reviews_count || 0,
         };
     });
 
-    // If a repair type filter is selected, filter by matching branch specialties or name
+    // Filter by repair type if selected
     if (filters.repair_type) {
-        data = data.filter(b => 
+        data = data.filter(b =>
             b.specialties.toLowerCase().includes(filters.repair_type.toLowerCase()) ||
             b.name.toLowerCase().includes(filters.repair_type.toLowerCase())
         );
     }
 
-    // Sort: closest distance and highest rating first
+    // Sort: closest distance first, then highest rating
     data.sort((x, y) => {
-        if (x.distance !== y.distance) {
-            return x.distance - y.distance;
-        }
+        if (x.distance !== y.distance) return x.distance - y.distance;
         return y.rating - x.rating;
     });
 
     return data;
 };
+
 
 export const createBranch = async (data) => {
     const url = `${getApiUrl()}/api/orgs/branches/`;

@@ -6,6 +6,7 @@ from accounts.models import CustomUser
 from devices.models import Device
 from workflow.models import WorkflowStage
 from providers.models import Technician
+from core.permissions import IsOwnerOfRepairOrder
 
 
 class RepairOrderListCreateView(generics.ListCreateAPIView):
@@ -138,13 +139,31 @@ class RepairOrderListCreateView(generics.ListCreateAPIView):
 
 
 class RepairOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = RepairOrder.objects.all()
     serializer_class = RepairOrderSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOfRepairOrder]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == "customer":
+            return RepairOrder.objects.filter(customer=user)
+        elif user.role == "technician":
+            tech = Technician.objects.filter(user=user).first()
+            if tech:
+                from django.db.models import Q
+                filters = Q(assigned_technician=tech)
+                if tech.branch:
+                    filters |= Q(branch=tech.branch)
+                elif tech.shop:
+                    filters |= Q(branch__organization__owner=tech.shop)
+                return RepairOrder.objects.filter(filters)
+            return RepairOrder.objects.none()
+        elif user.role == "shop_owner":
+            return RepairOrder.objects.filter(branch__organization__owner__user=user)
+        return RepairOrder.objects.none()
 
     def perform_update(self, serializer):
         old_status = self.get_object().status
-        
+
         status_code = self.request.data.get("status_code")
         if status_code:
             from workflow.models import WorkflowStage
@@ -165,6 +184,7 @@ class RepairOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
                 notes=stage_notes or f"Repair migrated to {new_status.name}",
                 updated_by=self.request.user
             )
+
 
 
 class PublicRepairOrderTrackView(generics.RetrieveAPIView):

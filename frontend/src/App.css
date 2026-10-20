@@ -1,4 +1,3 @@
-/* Shared Global CSS rules */
-body {
-    background: #060a14;
-}
+/* App-level global styles.
+   NOTE: Do NOT set body background here — it is managed by index.css
+   to match the Tailwind light-mode design token (surface: #f8f9ff). */

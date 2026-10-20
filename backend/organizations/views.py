@@ -98,39 +98,39 @@ class BranchListCreateView(generics.ListCreateAPIView):
                         results = data.get("results", [])
                         for idx, place in enumerate(results):
                             name = place.get("name", "").strip()
-                        name_lower = name.lower()
+                            name_lower = name.lower()
 
-                        # If shop exists in BOTH Google and Database:
-                        if name_lower in merged_branches:
-                            # Prefer the database shop! We keep the local record but enrich it with Google ratings
-                            local_shop = merged_branches[name_lower]
-                            local_shop["rating"] = float(place.get("rating", local_shop.get("rating", 4.5)))
-                            local_shop["reviews_count"] = place.get("user_ratings_total", local_shop.get("reviews_count", 50))
-                            loc = place.get("geometry", {}).get("location", {})
-                            if loc.get("lat") and loc.get("lng"):
-                                local_shop["latitude"] = float(loc["lat"])
-                                local_shop["longitude"] = float(loc["lng"])
-                        else:
-                            # Create a virtual external Google shop
-                            loc = place.get("geometry", {}).get("location", {})
-                            lat = float(loc.get("lat", 19.0760))
-                            lng = float(loc.get("lng", 72.8777))
-                            
-                            merged_branches[name_lower] = {
-                                "id": f"google_place_{place.get('place_id', idx)}",
-                                "name": name,
-                                "address": place.get("formatted_address", f"{city}, India"),
-                                "city": city,
-                                "phone": "N/A",
-                                "specialties": specialty,
-                                "rating": float(place.get("rating", 4.2)),
-                                "reviews_count": place.get("user_ratings_total", 15),
-                                "latitude": lat,
-                                "longitude": lng,
-                                "distance": 2.8,
-                                "is_local_db": False,
-                                "organization_name": "Google Maps Merchant"
-                            }
+                            # If shop exists in BOTH Google and Database:
+                            if name_lower in merged_branches:
+                                # Prefer the database shop! Keep local record but enrich with Google ratings
+                                local_shop = merged_branches[name_lower]
+                                local_shop["rating"] = float(place.get("rating", local_shop.get("rating", 4.5)))
+                                local_shop["reviews_count"] = place.get("user_ratings_total", local_shop.get("reviews_count", 50))
+                                loc = place.get("geometry", {}).get("location", {})
+                                if loc.get("lat") and loc.get("lng"):
+                                    local_shop["latitude"] = float(loc["lat"])
+                                    local_shop["longitude"] = float(loc["lng"])
+                            else:
+                                # Create a virtual external Google shop
+                                loc = place.get("geometry", {}).get("location", {})
+                                lat = float(loc.get("lat", 19.0760))
+                                lng = float(loc.get("lng", 72.8777))
+
+                                merged_branches[name_lower] = {
+                                    "id": f"google_place_{place.get('place_id', idx)}",
+                                    "name": name,
+                                    "address": place.get("formatted_address", f"{city}, India"),
+                                    "city": city,
+                                    "phone": "N/A",
+                                    "specialties": specialty,
+                                    "rating": float(place.get("rating", 4.2)),
+                                    "reviews_count": place.get("user_ratings_total", 15),
+                                    "latitude": lat,
+                                    "longitude": lng,
+                                    "distance": 2.8,
+                                    "is_local_db": False,
+                                    "organization_name": "Google Maps Merchant"
+                                }
             except Exception:
                 pass
 

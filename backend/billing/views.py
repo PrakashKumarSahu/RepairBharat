@@ -6,6 +6,7 @@ from repairs.models import RepairOrder
 from workflow.models import WorkflowStage
 from inventory.models import InventoryItem
 from decimal import Decimal
+from core.permissions import IsOwnerOfInvoice
 
 
 class GSTInvoiceListCreateView(generics.ListCreateAPIView):
@@ -147,6 +148,17 @@ class GSTInvoiceListCreateView(generics.ListCreateAPIView):
 
 
 class GSTInvoiceDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = GSTInvoice.objects.all()
     serializer_class = GSTInvoiceSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOfInvoice]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == "customer":
+            return GSTInvoice.objects.filter(ticket__customer=user)
+        elif user.role == "shop_owner":
+            return GSTInvoice.objects.filter(ticket__branch__organization__owner__user=user)
+        elif user.role == "technician":
+            tech_profile = getattr(user, "technician_profile_new", None)
+            if tech_profile and tech_profile.branch:
+                return GSTInvoice.objects.filter(ticket__branch=tech_profile.branch)
+        return GSTInvoice.objects.none()

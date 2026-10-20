@@ -1,6 +1,8 @@
 from rest_framework import generics, permissions
+from rest_framework.exceptions import PermissionDenied
 from .models import Skill, Technician
 from .serializers import SkillSerializer, TechnicianSerializer
+from core.permissions import IsOwnerOfTechnicianRecord
 
 
 class SkillListCreateView(generics.ListCreateAPIView):
@@ -73,7 +75,7 @@ class JoinRequestListCreateUpdateView(generics.ListCreateAPIView, generics.Updat
     def perform_create(self, serializer):
         user = self.request.user
         if user.role != "technician":
-            raise Response({"detail": "Only technicians can create join requests."}, status=status.HTTP_400_BAD_REQUEST)
+            raise PermissionDenied("Only technicians can create join requests.")
         tech = Technician.objects.get(user=user)
         shop_id = self.request.data.get("shop")
         shop = ShopOwnerProfile.objects.get(id=shop_id)
@@ -130,7 +132,7 @@ class JoinRequestListCreateUpdateView(generics.ListCreateAPIView, generics.Updat
 class TechnicianDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Technician.objects.all()
     serializer_class = TechnicianSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOfTechnicianRecord]
 
     def perform_update(self, serializer):
         instance = serializer.save()

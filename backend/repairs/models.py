@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.utils import timezone
 from core.models import TimeStampedModel
 from accounts.models import CustomUser
 from organizations.models import Branch
@@ -56,7 +57,7 @@ class RepairOrder(TimeStampedModel):
     def save(self, *args, **kwargs):
         if not self.ticket_number:
             unique_suffix = uuid.uuid4().hex[:6].upper()
-            self.ticket_number = f"RB-2026-{unique_suffix}"
+            self.ticket_number = f"RB-{timezone.now().year}-{unique_suffix}"
         super().save(*args, **kwargs)
 
     def __str__(self):

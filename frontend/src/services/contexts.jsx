@@ -10,7 +10,7 @@ export const UserContextProvider = ({children})=>{
         const item = JSON.parse(localStorage.getItem("token"));
         if(item){
             if((item.expiration - Date.now()) <= 0 ){
-                console.log("I RUNNED BRO");
+                // Token expired — clear it and force re-login
                 localStorage.removeItem("token");
                 setUser(null);
             }

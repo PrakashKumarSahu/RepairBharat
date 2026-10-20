@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions
 from .models import InventoryItem
 from .serializers import InventoryItemSerializer
+from core.permissions import IsOwnerOfInventoryItem
 
 
 class InventoryItemListCreateView(generics.ListCreateAPIView):
@@ -27,6 +28,15 @@ class InventoryItemListCreateView(generics.ListCreateAPIView):
 
 
 class InventoryItemDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = InventoryItem.objects.all()
     serializer_class = InventoryItemSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsOwnerOfInventoryItem]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == "shop_owner":
+            return InventoryItem.objects.filter(branch__organization__owner__user=user)
+        elif user.role == "technician":
+            tech_profile = getattr(user, "technician_profile_new", None)
+            if tech_profile and tech_profile.shop:
+                return InventoryItem.objects.filter(branch__organization__owner=tech_profile.shop)
+        return InventoryItem.objects.none()

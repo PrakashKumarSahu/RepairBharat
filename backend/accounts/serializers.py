@@ -1,4 +1,5 @@
 from django.contrib.auth.password_validation import validate_password
+from django.db.models import Q
 from rest_framework import serializers
 
 from .models import (
@@ -79,8 +80,8 @@ class RegisterSerializer(serializers.ModelSerializer):
                 from .models import ShopOwnerProfile
                 # Search by shop name or owner username
                 shop = ShopOwnerProfile.objects.filter(
-                    models.Q(shop_name__icontains=shop_name) | 
-                    models.Q(user__username__iexact=shop_name)
+                    Q(shop_name__icontains=shop_name) |
+                    Q(user__username__iexact=shop_name)
                 ).first()
                 if shop:
                     profile = user.technician_profile
