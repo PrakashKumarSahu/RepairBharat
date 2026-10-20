@@ -32,6 +32,18 @@ const getAuthHeaders = () => {
     }
 };
 
+export const api = axios.create({
+    baseURL: getApiUrl(),
+});
+
+api.interceptors.request.use((config) => {
+    const headers = getAuthHeaders();
+    if (headers.Authorization) {
+        config.headers.Authorization = headers.Authorization;
+    }
+    return config;
+});
+
 export const signup = async (data) => {
     const url = `${getApiUrl()}/accounts/register/`;
     try {
@@ -278,4 +290,51 @@ export const fetchPublicTicket = async (ticketNumber) => {
     const url = `${getApiUrl()}/api/repairs/public-track/${ticketNumber}/`;
     const response = await axios.get(url);
     return response.data;
+};
+
+// ── Notifications ────────────────────────────────────────────────────────────
+export const fetchNotifications = async () => {
+    const res = await api.get('/api/notifications/');
+    return res.data;
+};
+
+export const fetchUnreadNotificationCount = async () => {
+    const res = await api.get('/api/notifications/unread-count/');
+    return res.data.count;
+};
+
+export const markNotificationsRead = async () => {
+    const res = await api.post('/api/notifications/mark-read/');
+    return res.data;
+};
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+export const fetchAnalyticsKPIs = async () => {
+    const res = await api.get('/api/analytics/kpis/');
+    return res.data;
+};
+
+export const fetchRevenueOverTime = async (range = '30d') => {
+    const res = await api.get(`/api/analytics/revenue/?range=${range}`);
+    return res.data;
+};
+
+export const fetchTicketStatusSummary = async () => {
+    const res = await api.get('/api/analytics/tickets/status-summary/');
+    return res.data;
+};
+
+export const fetchTechnicianPerformance = async () => {
+    const res = await api.get('/api/analytics/technicians/performance/');
+    return res.data;
+};
+
+export const fetchLowStockSummary = async () => {
+    const res = await api.get('/api/analytics/inventory/low-stock/');
+    return res.data;
+};
+
+export const fetchActivityLog = async () => {
+    const res = await api.get('/api/audit-log/');
+    return res.data;
 };

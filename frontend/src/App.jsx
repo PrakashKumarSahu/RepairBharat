@@ -3,6 +3,7 @@ import Home from './pages/login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/dashboard';
 import TrackTicket from './pages/TrackTicket';
+import DeviceManagement from './pages/DeviceManagement';
 import './App.css';
 import { UserContextProvider } from './services/contexts';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -16,6 +17,11 @@ function App() {
         <Route path='/dashboard' element={
             <ProtectedRoute>
                 <Dashboard />
+            </ProtectedRoute>
+        } />
+        <Route path="/devices" element={
+            <ProtectedRoute>
+                <DeviceManagement />
             </ProtectedRoute>
         } />
         <Route path="/login" element={<Home />} />

@@ -19,6 +19,7 @@ import { CreateBranchModal } from '../../components/branches/CreateBranchModal';
 import { CreateInvoiceModal } from '../../components/billing/CreateInvoiceModal';
 import { AddInventoryModal } from '../../components/inventory/AddInventoryModal';
 import { InvoicePrintView } from '../../components/billing/InvoicePrintView';
+import { AnalyticsDashboard } from '../../components/analytics/AnalyticsDashboard';
 import Modal from '../../components/ui/Modal';
 
 export default function ShopOwnerDashboard() {
@@ -620,6 +621,14 @@ export default function ShopOwnerDashboard() {
                                 {/* ── INVENTORY TAB ── */}
                                 {activeTab === 'inventory' && (
                                     <div className="space-y-6">
+                                        {inventory.filter(i => i.stock_level <= i.low_stock_threshold).length > 0 && (
+                                            <div className="bg-error/10 border border-error/30 rounded-xl p-3 flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-error text-[18px]">inventory_2</span>
+                                                <span className="text-sm text-error font-semibold">
+                                                    {inventory.filter(i => i.stock_level <= i.low_stock_threshold).length} item(s) below reorder threshold
+                                                </span>
+                                            </div>
+                                        )}
                                         <div className="flex justify-between items-end flex-wrap gap-2 mb-2">
                                             <div>
                                                 <h2 className="font-headline-xl text-[28px] font-bold text-primary">Spares Inventory</h2>
@@ -760,6 +769,9 @@ export default function ShopOwnerDashboard() {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* ── ANALYTICS TAB ── */}
+                                {activeTab === 'analytics' && <AnalyticsDashboard />}
                             </>
                         )}
                     </main>

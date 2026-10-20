@@ -1,96 +1,162 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-import { useUserContext } from "../../services";
+import { useState, useEffect, useRef } from 'react';
+import { useUserContext } from '../../services';
+import { fetchNotifications, fetchUnreadNotificationCount, markNotificationsRead } from '../../services/api';
 
-const ROLE_LABEL = {
-    shop_owner: "ERP Admin",
-    technician: "Workstation Tech",
-    customer: "Customer Client",
-};
-
-/**
- * Top application bar (fixed, z-50).
- * Shows brand logo, user info, profile menu dropdown.
- *
- * @param {boolean}  mobileMenuOpen   - Whether mobile sidebar is open
- * @param {Function} onMobileMenuToggle
- */
 export function Navbar({ mobileMenuOpen, onMobileMenuToggle }) {
-    const { user, setUser } = useUserContext();
-    const navigate = useNavigate();
+    const { user, logout } = useUserContext();
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [notifications, setNotifications] = useState([]);
+    const [bellOpen, setBellOpen] = useState(false);
+    const bellRef = useRef(null);
 
-    const [showProfileMenu, setShowProfileMenu] = React.useState(false);
+    const loadUnread = async () => {
+        if (!user) return;
+        try {
+            const count = await fetchUnreadNotificationCount();
+            setUnreadCount(count);
+        } catch {/* silent */}
+    };
 
-    React.useEffect(() => {
-        const handleClickOutside = (e) => {
-            if (!e.target.closest(".profile-menu-container")) {
-                setShowProfileMenu(false);
+    const loadNotifications = async () => {
+        try {
+            const data = await fetchNotifications();
+            setNotifications(data);
+        } catch {/* silent */}
+    };
+
+    useEffect(() => {
+        if (!user) return;
+        loadUnread();
+        const interval = setInterval(loadUnread, 30000);
+        return () => clearInterval(interval);
+    }, [user]);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handler = (e) => {
+            if (bellRef.current && !bellRef.current.contains(e.target)) {
+                setBellOpen(false);
             }
         };
-        document.addEventListener("click", handleClickOutside);
-        return () => document.removeEventListener("click", handleClickOutside);
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    const handleLogout = () => {
-        localStorage.removeItem("token");
-        setUser(null);
-        navigate("/login", { replace: true });
+    const handleBellClick = async () => {
+        if (!bellOpen) await loadNotifications();
+        setBellOpen((p) => !p);
+    };
+
+    const handleMarkAllRead = async () => {
+        await markNotificationsRead();
+        setUnreadCount(0);
+        setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    };
+
+    const roleLabel = user?.role === 'shop_owner' ? 'Shop Owner' : user?.role === 'technician' ? 'Technician' : 'Customer';
+    const roleColors = {
+        shop_owner: 'bg-primary/10 text-primary',
+        technician: 'bg-secondary/10 text-secondary',
+        customer: 'bg-surface-variant text-on-surface-variant',
     };
 
     return (
-        <header className="fixed top-0 w-full z-50 bg-surface dark:bg-inverse-surface shadow-sm flex justify-between items-center px-margin-mobile h-touch-target">
-            <div className="flex items-center gap-sm">
-                <button
-                    onClick={onMobileMenuToggle}
-                    className="md:hidden flex items-center justify-center p-1 text-primary hover:bg-surface-container rounded-lg"
-                    aria-label="Toggle navigation menu"
-                >
-                    <span className="material-symbols-outlined text-[24px]">menu</span>
-                </button>
-                <span
-                    className="material-symbols-outlined text-primary dark:text-primary-fixed-dim text-[28px]"
-                    style={{ fontVariationSettings: "'FILL' 1" }}
-                >
-                    handyman
+        <header className="fixed top-0 left-0 right-0 z-40 bg-surface border-b border-outline-variant shadow-sm h-12 flex items-center px-4 gap-3">
+            {/* Mobile menu toggle */}
+            <button
+                className="md:hidden text-on-surface"
+                onClick={onMobileMenuToggle}
+                aria-label="Toggle menu"
+            >
+                <span className="material-symbols-outlined text-[22px]">
+                    {mobileMenuOpen ? 'close' : 'menu'}
                 </span>
-                <h1 className="font-headline-lg text-[22px] font-bold text-primary dark:text-primary-fixed">
-                    RepairBharat
-                </h1>
-            </div>
+            </button>
 
-            <div className="flex items-center gap-md">
-                <div className="hidden md:flex flex-col text-right">
-                    <span className="text-sm font-bold text-on-surface">{user?.username}</span>
-                    <span className="text-[11px] text-on-surface-variant font-semibold uppercase">
-                        {ROLE_LABEL[user?.role] ?? user?.role}
-                    </span>
-                </div>
+            {/* Brand */}
+            <span className="font-bold text-primary text-lg tracking-tight select-none">
+                RepairBharat
+            </span>
 
-                {/* Profile action menu */}
-                <div className="relative profile-menu-container">
+            <span className="flex-1" />
+
+            {/* Role badge */}
+            {user && (
+                <span className={`hidden sm:inline-flex text-xs font-semibold px-2 py-0.5 rounded-full ${roleColors[user.role] || ''}`}>
+                    {roleLabel}
+                </span>
+            )}
+
+            {/* Notification bell */}
+            {user && (
+                <div className="relative" ref={bellRef}>
                     <button
-                        onClick={() => setShowProfileMenu((prev) => !prev)}
-                        className="w-8 h-8 rounded-full overflow-hidden bg-primary-container border border-outline flex items-center justify-center font-bold text-primary text-sm shadow-sm cursor-pointer"
-                        aria-label="Open profile menu"
+                        onClick={handleBellClick}
+                        className="relative text-on-surface hover:text-primary transition-colors"
+                        aria-label="Notifications"
                     >
-                        {user?.username?.substring(0, 2).toUpperCase()}
+                        <span className="material-symbols-outlined text-[22px]">notifications</span>
+                        {unreadCount > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-error text-on-error text-[10px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-1">
+                                {unreadCount > 9 ? '9+' : unreadCount}
+                            </span>
+                        )}
                     </button>
 
-                    {showProfileMenu && (
-                        <div className="absolute right-0 top-full pt-2 w-48 z-50 animate-fadeIn">
-                            <div className="bg-surface shadow-md rounded-xl border border-outline-variant p-2">
-                                <button
-                                    onClick={handleLogout}
-                                    className="w-full flex items-center gap-2 p-2 text-sm text-error hover:bg-error-container rounded-lg font-bold transition-all text-left cursor-pointer"
-                                >
-                                    <span className="material-symbols-outlined text-[18px]">logout</span>
-                                    <span>Sign Out</span>
-                                </button>
+                    {/* Dropdown */}
+                    {bellOpen && (
+                        <div className="absolute right-0 top-8 w-80 bg-surface border border-outline-variant rounded-xl shadow-lg z-50 overflow-hidden">
+                            <div className="flex items-center justify-between px-4 py-2 border-b border-outline-variant">
+                                <span className="font-semibold text-sm text-on-surface">Notifications</span>
+                                {unreadCount > 0 && (
+                                    <button
+                                        onClick={handleMarkAllRead}
+                                        className="text-xs text-primary hover:underline"
+                                    >
+                                        Mark all read
+                                    </button>
+                                )}
+                            </div>
+                            <div className="max-h-72 overflow-y-auto divide-y divide-outline-variant">
+                                {notifications.length === 0 ? (
+                                    <p className="text-center text-xs text-on-surface-variant py-6">No notifications yet</p>
+                                ) : (
+                                    notifications.map((n) => (
+                                        <div
+                                            key={n.id}
+                                            className={`px-4 py-3 ${n.is_read ? 'opacity-60' : 'bg-primary/5'}`}
+                                        >
+                                            <p className="text-xs font-semibold text-on-surface">{n.title}</p>
+                                            <p className="text-xs text-on-surface-variant mt-0.5 line-clamp-2">{n.body}</p>
+                                            <p className="text-[10px] text-on-surface-variant mt-1">
+                                                {new Date(n.created_at).toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' })}
+                                            </p>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
                     )}
                 </div>
-            </div>
+            )}
+
+            {/* User info + logout */}
+            {user && (
+                <div className="flex items-center gap-2">
+                    <span className="hidden sm:inline text-xs text-on-surface-variant truncate max-w-[120px]">
+                        {user.username}
+                    </span>
+                    <button
+                        onClick={logout}
+                        className="text-on-surface hover:text-error transition-colors"
+                        aria-label="Logout"
+                    >
+                        <span className="material-symbols-outlined text-[20px]">logout</span>
+                    </button>
+                </div>
+            )}
         </header>
     );
 }
+
+export default Navbar;

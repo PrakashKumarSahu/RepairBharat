@@ -10,6 +10,7 @@ const NAV_CONFIG = {
         { tab: "erp",       icon: "dashboard",              label: "Master ERP Control" },
         { tab: "inventory", icon: "precision_manufacturing", label: "Spares Inventory" },
         { tab: "billing",   icon: "receipt_long",            label: "GST Billing & Invoices" },
+        { tab: "analytics", icon: "analytics",               label: "Analytics & Reports" },
     ],
     technician: [
         { tab: "queue",       icon: "assignment",   label: "My Active Queue" },
@@ -57,6 +58,18 @@ export function Sidebar({ activeTab, onTabChange, mobileOpen, onMobileClose }) {
                     <span>{label}</span>
                 </button>
             ))}
+            {user?.role === 'customer' && (
+                <button
+                    onClick={() => {
+                        navigate('/devices');
+                        onClickTab?.();
+                    }}
+                    className="flex items-center gap-3 p-3 font-semibold text-sm rounded-lg transition-all text-on-surface-variant hover:bg-surface-container"
+                >
+                    <span className="material-symbols-outlined text-[20px]">devices</span>
+                    <span>My Registered Devices</span>
+                </button>
+            )}
         </nav>
     );
 

@@ -23,7 +23,12 @@ export const UserContextProvider = ({children})=>{
             }
         }
     },[]);
-    return <userContext.Provider value={{user, setUser}}>
+    const logout = () => {
+        localStorage.removeItem("token");
+        setUser(null);
+    };
+
+    return <userContext.Provider value={{user, setUser, logout}}>
         {children}
     </userContext.Provider>
 }
