@@ -16,5 +16,20 @@ export default defineConfig({
         changeOrigin: true,
       }
     }
-  }
+  },
+  build: {
+    // Raise the warning threshold — the modular split reduces chunk size significantly
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        // Manual code-splitting: vendor libs in a separate chunk
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-router': ['react-router-dom'],
+          'vendor-axios': ['axios'],
+          'vendor-toast': ['react-hot-toast'],
+        },
+      },
+    },
+  },
 })

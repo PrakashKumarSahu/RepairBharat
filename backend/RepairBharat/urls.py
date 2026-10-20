@@ -22,7 +22,7 @@ from rest_framework_simplejwt import views as jwt_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
-    path('api/token/', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    # JWT Token Refresh — login is handled by accounts/login/ (SimpleJWT TokenObtainPairView)
     path('api/token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
     path('api/inventory/', include('inventory.urls')),
     path('api/billing/', include('billing.urls')),
