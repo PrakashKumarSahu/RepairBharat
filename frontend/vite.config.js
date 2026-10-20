@@ -23,11 +23,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         // Manual code-splitting: vendor libs in a separate chunk
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-router': ['react-router-dom'],
-          'vendor-axios': ['axios'],
-          'vendor-toast': ['react-hot-toast'],
+        manualChunks: (id) => {
+          if (id.includes('react-dom') || id.includes('node_modules/react/')) return 'vendor-react';
+          if (id.includes('react-router-dom') || id.includes('@remix-run')) return 'vendor-router';
+          if (id.includes('node_modules/axios/')) return 'vendor-axios';
+          if (id.includes('react-hot-toast')) return 'vendor-toast';
         },
       },
     },

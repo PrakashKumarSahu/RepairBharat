@@ -40,3 +40,5 @@ export function Modal({ open, onClose, title, children, maxWidth = "max-w-lg" })
         </div>
     );
 }
+
+export default Modal;
