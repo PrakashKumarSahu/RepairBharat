@@ -28,6 +28,10 @@ class GSTInvoiceListCreateView(generics.ListCreateAPIView):
 
     def create(self, request, *args, **kwargs):
         import json
+        # Only shop owners and technicians can generate invoices
+        if request.user.role == 'customer':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Customers cannot create invoices.')
         ticket_id = request.data.get("ticket")
         labor_charges = Decimal(request.data.get("labor_charges", "0.00"))
         labor_gst_rate = Decimal(request.data.get("labor_gst_rate", "18.00"))

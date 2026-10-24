@@ -130,7 +130,7 @@ export const fetchBranches = async (filters = {}, userCoords = null) => {
     if (filters.search) params.append("search", filters.search);
     if (filters.all) params.append("all", "true");
 
-    const response = await axios.get(`${url}?${params.toString()}`);
+    const response = await api.get(`/api/orgs/branches/?${params.toString()}`);
     let data = response.data;
 
     // Use the actual user GPS position if provided, otherwise fall back to Mumbai
@@ -336,5 +336,21 @@ export const fetchLowStockSummary = async () => {
 
 export const fetchActivityLog = async () => {
     const res = await api.get('/api/audit-log/');
+    return res.data;
+};
+
+// ── Devices ──────────────────────────────────────────────────────────────────
+export const fetchDevices = async () => {
+    const res = await api.get('/api/devices/');
+    return res.data;
+};
+
+export const createDevice = async (data) => {
+    const res = await api.post('/api/devices/', data);
+    return res.data;
+};
+
+export const deleteDevice = async (id) => {
+    const res = await api.delete(`/api/devices/${id}/`);
     return res.data;
 };

@@ -149,7 +149,16 @@ SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS: allow_all_origins cannot coexist with allow_credentials (browser will reject).
+# Use an explicit allowlist instead.
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:8001",
+    "https://quikx.live",
+    "https://www.quikx.live",
+]
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 AUTH_USER_MODEL = 'accounts.CustomUser'
 STATIC_URL = 'static/'

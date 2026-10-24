@@ -3,7 +3,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { useUserContext } from '../../services';
 import {
     fetchBranches, fetchTickets, fetchTechnicians, fetchInventory,
-    fetchInvoices, fetchCustomers, fetchJoinRequests, createBranch,
+    fetchInvoices, fetchCustomers, fetchJoinRequests, fetchStages, createBranch,
     createTicket, createInvoice, updateTicket, updateJoinRequest,
     updateTechnician, addInventoryItem
 } from '../../services/api';
@@ -101,14 +101,15 @@ export default function ShopOwnerDashboard() {
     const loadDashboardData = async () => {
         setLoading(true);
         try {
-            const [branchData, ticketData, techData, invData, invList, custData, reqData] = await Promise.all([
+            const [branchData, ticketData, techData, invData, invList, custData, reqData, stageData] = await Promise.all([
                 fetchBranches({}),
                 fetchTickets(),
                 fetchTechnicians(),
                 fetchInventory(),
                 fetchInvoices(),
                 fetchCustomers(),
-                fetchJoinRequests()
+                fetchJoinRequests(),
+                fetchStages(),
             ]);
             setBranches(branchData);
             setTickets(ticketData);
@@ -117,6 +118,7 @@ export default function ShopOwnerDashboard() {
             setInvoices(invList);
             setCustomers(custData);
             setJoinRequests(reqData);
+            setStages(stageData);
         } catch (error) {
             toast.error('Unable to load latest records. Please refresh.');
         } finally {
@@ -783,7 +785,7 @@ export default function ShopOwnerDashboard() {
                     onClose={() => setShowStageNotesModal(false)}
                     stageCode={stageNotesCode}
                     stages={stages}
-                    notes={stageNotesInput}
+                    notesInput={stageNotesInput}
                     onNotesChange={setStageNotesInput}
                     onSubmit={submitStageNotesTransition}
                 />
@@ -806,7 +808,7 @@ export default function ShopOwnerDashboard() {
                 <CreateInvoiceModal
                     open={showInvoiceModal}
                     onClose={() => setShowInvoiceModal(false)}
-                    ticket={activeInvoiceTicket}
+                    activeTicket={activeInvoiceTicket}
                     inventory={inventory}
                     laborCharges={laborCharges}
                     onLaborChange={setLaborCharges}

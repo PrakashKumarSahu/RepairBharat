@@ -31,6 +31,9 @@ class TechnicianListCreateView(generics.ListCreateAPIView):
                 )
         return queryset.order_by("-is_verified")
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
 
 from accounts.models import ShopOwnerProfile
 from .models import TechnicianJoinRequest
@@ -76,9 +79,22 @@ class JoinRequestListCreateUpdateView(generics.ListCreateAPIView, generics.Updat
         user = self.request.user
         if user.role != "technician":
             raise PermissionDenied("Only technicians can create join requests.")
-        tech = Technician.objects.get(user=user)
-        shop_id = self.request.data.get("shop")
-        shop = ShopOwnerProfile.objects.get(id=shop_id)
+        try:
+            tech = Technician.objects.get(user=user)
+        except Technician.DoesNotExist:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'detail': 'Technician profile not found. Please complete registration.'})
+
+        shop_id = self.request.data.get('shop')
+        if not shop_id:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'detail': 'shop field is required.'})
+        try:
+            shop = ShopOwnerProfile.objects.get(id=shop_id)
+        except ShopOwnerProfile.DoesNotExist:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'detail': 'Shop not found.'})
+
         serializer.save(technician=tech, shop=shop, status="pending")
 
     def patch(self, request, *args, **kwargs):
@@ -137,7 +153,6 @@ class TechnicianDetailView(generics.RetrieveUpdateDestroyAPIView):
     def perform_update(self, serializer):
         instance = serializer.save()
         try:
-            from accounts.models import TechnicianProfile
             legacy_profile = getattr(instance.user, "technician_profile", None)
             if legacy_profile:
                 legacy_profile.is_verified = instance.is_verified

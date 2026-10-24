@@ -11,7 +11,7 @@ export function getStatusLabelAndColor(code, stages = []) {
     if (matchingStage) {
         return {
             label: matchingStage.name,
-            color: matchingStage.color || "#00288e",
+            color: matchingStage.color_hex || "#00288e",
         };
     }
 

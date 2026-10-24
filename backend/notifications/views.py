@@ -11,7 +11,12 @@ class NotificationListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Notification.objects.filter(recipient=self.request.user)[:50]
+        return Notification.objects.filter(recipient=self.request.user).order_by('-created_at')[:50]
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        serializer = self.get_serializer(list(qs), many=True)
+        return Response(serializer.data)
 
 
 @api_view(['POST'])

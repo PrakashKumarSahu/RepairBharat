@@ -1,16 +1,17 @@
 from django.urls import path
 from rest_framework import generics, permissions, serializers
-from rest_framework.response import Response
 from .models import ActivityLog
 
 
 class ActivityLogSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(source='user.username', read_only=True)
+    username = serializers.SerializerMethodField()
 
     class Meta:
-        from core.models import ActivityLog as AL
-        model = AL
+        model = ActivityLog
         fields = ['id', 'username', 'action', 'resource_type', 'resource_id', 'metadata', 'ip_address', 'created_at']
+
+    def get_username(self, obj):
+        return obj.user.username if obj.user else 'system'
 
 
 class ActivityLogListView(generics.ListAPIView):
@@ -20,11 +21,13 @@ class ActivityLogListView(generics.ListAPIView):
     def get_queryset(self):
         if self.request.user.role != 'shop_owner':
             return ActivityLog.objects.none()
-        return ActivityLog.objects.filter(
-            user__in=__import__('accounts.models', fromlist=['CustomUser']).CustomUser.objects.filter(
-                role__in=['shop_owner', 'technician']
-            )
-        )[:200]
+        return ActivityLog.objects.select_related('user').order_by('-created_at')[:200]
+
+    def list(self, request, *args, **kwargs):
+        qs = self.get_queryset()
+        serializer = self.get_serializer(list(qs), many=True)
+        from rest_framework.response import Response
+        return Response(serializer.data)
 
 
 urlpatterns = [

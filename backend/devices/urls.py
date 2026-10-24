@@ -1,6 +1,7 @@
 from django.urls import path
-from .views import DeviceListCreateView
+from .views import DeviceListCreateView, DeviceDetailView
 
 urlpatterns = [
     path("", DeviceListCreateView.as_view(), name="device-list-create"),
+    path("<int:pk>/", DeviceDetailView.as_view(), name="device-detail"),
 ]

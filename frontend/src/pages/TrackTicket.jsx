@@ -34,7 +34,7 @@ export default function TrackTicket() {
         switch (code) {
             case "received": return { label: "Received & Logged", icon: "inbox_customize", color: "#3755c3", desc: "Your device has been checked in and registered at our workstation queue." };
             case "diagnosing": return { label: "Diagnostics Bench", icon: "troubleshoot", color: "#ffa85d", desc: "Our certified hardware technicians are diagnosing motherboard and circuitry logs." };
-            case "repairing": return { label: "Active Service Bench", icon: "build_circle", color: "#00288e", desc: "Technical repair operations and spare parts replacement are currently underway." };
+            case "in_repair": return { label: "Active Service Bench", icon: "build_circle", color: "#00288e", desc: "Technical repair operations and spare parts replacement are currently underway." };
             case "ready": return { label: "Quality Checks & Ready", icon: "verified", color: "#006d30", desc: "Service completed! Device passed all quality parameters and is ready for pickup." };
             case "delivered": return { label: "Delivered & Settled", icon: "check_circle", color: "#444653", desc: "The device has been successfully handed over to the client. Case closed." };
             default: return { label: code || "Registered", icon: "settings_wrench", color: "#3755c3", desc: "Workstation queue logs updated." };

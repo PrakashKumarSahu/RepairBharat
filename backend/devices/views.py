@@ -12,6 +12,7 @@ class DeviceListCreateView(generics.ListCreateAPIView):
         user = self.request.user
         if user.role == "customer":
             return Device.objects.filter(customer=user).order_by("-created_at")
+        # shop_owner / technician: all devices (they create walk-in records)
         return Device.objects.all().order_by("-created_at")
 
     def perform_create(self, serializer):
@@ -28,3 +29,15 @@ class DeviceListCreateView(generics.ListCreateAPIView):
                     serializer.save(customer=user)
             else:
                 serializer.save(customer=user)
+
+
+class DeviceDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """GET / PATCH / DELETE /api/devices/<pk>/"""
+    serializer_class = DeviceSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == "customer":
+            return Device.objects.filter(customer=user)
+        return Device.objects.all()

@@ -12,11 +12,19 @@ class TechnicianSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source="user.username", read_only=True)
     skills_list = SkillSerializer(source="skills", many=True, read_only=True)
     branch_name = serializers.CharField(source="branch.name", read_only=True)
+    shop_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Technician
         fields = "__all__"
-        read_only_fields = ("id", "created_at", "updated_at")
+        read_only_fields = ("id", "user", "created_at", "updated_at")
+
+    def get_shop_name(self, obj):
+        if obj.shop:
+            return obj.shop.shop_name
+        if obj.branch and obj.branch.organization:
+            return obj.branch.organization.name
+        return None
 
 
 from accounts.models import ShopOwnerProfile

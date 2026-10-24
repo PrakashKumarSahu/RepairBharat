@@ -27,6 +27,7 @@ function App() {
         <Route path="/login" element={<Home />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/track/:ticketNumber" element={<TrackTicket />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
 </UserContextProvider>
     </>

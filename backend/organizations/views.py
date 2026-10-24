@@ -2,7 +2,6 @@ from rest_framework import generics, permissions
 from django.db.models import Q
 from .models import Organization, Branch
 from .serializers import OrganizationSerializer, BranchSerializer
-from accounts.models import ShopOwnerProfile
 
 
 class OrganizationListCreateView(generics.ListCreateAPIView):
@@ -16,6 +15,9 @@ class OrganizationListCreateView(generics.ListCreateAPIView):
         return Organization.objects.none()
 
     def perform_create(self, serializer):
+        if self.request.user.role != 'shop_owner':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only shop owners can create organizations.')
         profile = self.request.user.shop_owner_profile
         serializer.save(owner=profile)
 
@@ -137,6 +139,9 @@ class BranchListCreateView(generics.ListCreateAPIView):
         return Response(list(merged_branches.values()))
 
     def perform_create(self, serializer):
+        if self.request.user.role != 'shop_owner':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only shop owners can create branches.')
         profile = self.request.user.shop_owner_profile
         org = Organization.objects.filter(owner=profile).first()
         gst_num = self.request.data.get("gst_number") or ""

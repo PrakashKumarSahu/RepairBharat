@@ -1,5 +1,5 @@
-import React from 'react';
 import Modal from '../ui/Modal';
+import { formatRupee } from '../../utils/status';
 
 export function InvoicePrintView({ open, onClose, invoice }) {
     if (!open || !invoice) return null;
@@ -10,11 +10,6 @@ export function InvoicePrintView({ open, onClose, invoice }) {
             day: '2-digit', month: 'long', year: 'numeric'
         });
     };
-
-    const formatRupee = (val) =>
-        parseFloat(val || 0).toLocaleString('en-IN', {
-            minimumFractionDigits: 2, maximumFractionDigits: 2
-        });
 
     const handlePrint = () => window.print();
 
@@ -74,27 +69,36 @@ export function InvoicePrintView({ open, onClose, invoice }) {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr className="border-b border-surface-container">
-                                <td className="p-3 font-semibold">Labour Charges</td>
-                                <td className="p-3 text-right font-medium">₹{formatRupee(invoice.labor_charges)}</td>
-                            </tr>
-                            {parseFloat(invoice.spares_value || 0) > 0 && (
+                            {/* Labor charges */}
+                            {parseFloat(invoice.labor_charges || 0) > 0 && (
                                 <tr className="border-b border-surface-container">
-                                    <td className="p-3 font-semibold">Spares / Parts Value</td>
-                                    <td className="p-3 text-right font-medium">₹{formatRupee(invoice.spares_value)}</td>
+                                    <td className="p-3 font-semibold">Labour Charges</td>
+                                    <td className="p-3 text-right font-medium">{formatRupee(invoice.labor_charges)}</td>
                                 </tr>
                             )}
+                            {/* Parse manual_items for spare parts */}
+                            {(() => {
+                                try {
+                                    const items = JSON.parse(invoice.manual_items || '[]');
+                                    return items.map((item, i) => (
+                                        <tr key={i} className="border-b border-surface-container">
+                                            <td className="p-3 font-semibold">{item.name || 'Spare Part'}</td>
+                                            <td className="p-3 text-right font-medium">{formatRupee((item.price || 0) * (item.qty || 1))}</td>
+                                        </tr>
+                                    ));
+                                } catch { return null; }
+                            })()}
                             <tr className="border-b border-surface-container">
                                 <td className="p-3 text-outline font-semibold">CGST @ 9%</td>
-                                <td className="p-3 text-right text-outline font-medium">₹{formatRupee(invoice.cgst)}</td>
+                                <td className="p-3 text-right text-outline font-medium">{formatRupee(invoice.cgst)}</td>
                             </tr>
                             <tr className="border-b border-surface-container">
                                 <td className="p-3 text-outline font-semibold">SGST @ 9%</td>
-                                <td className="p-3 text-right text-outline font-medium">₹{formatRupee(invoice.sgst)}</td>
+                                <td className="p-3 text-right text-outline font-medium">{formatRupee(invoice.sgst)}</td>
                             </tr>
                             <tr className="bg-primary/5">
                                 <td className="p-3 font-extrabold text-primary text-base">Grand Total</td>
-                                <td className="p-3 text-right font-extrabold text-primary text-lg">₹{formatRupee(invoice.grand_total)}</td>
+                                <td className="p-3 text-right font-extrabold text-primary text-lg">{formatRupee(invoice.grand_total)}</td>
                             </tr>
                         </tbody>
                     </table>

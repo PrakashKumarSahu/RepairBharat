@@ -651,7 +651,7 @@ export default function TechnicianDashboard() {
                 </div>
 
                 {/* Modals */}
-                <StageTransitionModal open={showStageNotesModal} onClose={() => setShowStageNotesModal(false)} stageCode={stageNotesCode} stages={stages} notes={stageNotesInput} onNotesChange={setStageNotesInput} onSubmit={submitStageNotesTransition} />
+                <StageTransitionModal open={showStageNotesModal} onClose={() => setShowStageNotesModal(false)} stageCode={stageNotesCode} stages={stages} notesInput={stageNotesInput} onNotesChange={setStageNotesInput} onSubmit={submitStageNotesTransition} />
                 <WalkinModal open={showWalkinModal} onClose={() => setShowWalkinModal(false)} form={walkinForm} onFormChange={setWalkinForm} onSubmit={handleCreateWalkinSubmit} customers={customers} branches={branches} />
                 <InvoicePrintView open={showInvoicePreviewModal} onClose={() => setShowInvoicePreviewModal(false)} invoice={selectedPreviewInvoice} />
                 <QrSuccessModal open={showSuccessQrModal} onClose={() => setShowSuccessQrModal(false)} ticketNumber={successTicketNumber} deviceName={successDeviceName} />
