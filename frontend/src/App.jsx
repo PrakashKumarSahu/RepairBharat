@@ -7,11 +7,14 @@ import DeviceManagement from './pages/DeviceManagement';
 import './App.css';
 import { UserContextProvider } from './services/contexts';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import NotFound from './pages/NotFound';
 
 function App() {
   return (
     <>
     <UserContextProvider>
+    <ErrorBoundary>
     <Routes>
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path='/dashboard' element={
@@ -27,8 +30,9 @@ function App() {
         <Route path="/login" element={<Home />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/track/:ticketNumber" element={<TrackTicket />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<NotFound />} />
     </Routes>
+    </ErrorBoundary>
 </UserContextProvider>
     </>
 

@@ -28,6 +28,11 @@ export default defineConfig({
           if (id.includes('react-router-dom') || id.includes('@remix-run')) return 'vendor-router';
           if (id.includes('node_modules/axios/')) return 'vendor-axios';
           if (id.includes('react-hot-toast')) return 'vendor-toast';
+          if (id.includes('recharts') || id.includes('d3-') || id.includes('victory')) return 'vendor-charts';
+          if (id.includes('@tanstack/react-query')) return 'vendor-query';
+          if (id.includes('react-hook-form') || id.includes('@hookform') || id.includes('zod')) return 'vendor-forms';
+          if (id.includes('date-fns')) return 'vendor-datefns';
+          if (id.includes('lucide-react')) return 'vendor-icons';
         },
       },
     },
