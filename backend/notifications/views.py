@@ -11,11 +11,13 @@ class NotificationListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Notification.objects.filter(recipient=self.request.user).order_by('-created_at')[:50]
+        return Notification.objects.filter(
+            recipient=self.request.user
+        ).select_related('recipient').order_by('-created_at')[:50]
 
     def list(self, request, *args, **kwargs):
-        qs = self.get_queryset()
-        serializer = self.get_serializer(list(qs), many=True)
+        qs = list(self.get_queryset())  # evaluate slice before DRF touches it
+        serializer = self.get_serializer(qs, many=True)
         return Response(serializer.data)
 
 

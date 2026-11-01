@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from .models import GSTInvoice
 from .serializers import GSTInvoiceSerializer
+from .filters import GSTInvoiceFilter
 from repairs.models import RepairOrder
 from workflow.models import WorkflowStage
 from inventory.models import InventoryItem
@@ -13,10 +14,13 @@ from core.audit import log_action
 class GSTInvoiceListCreateView(generics.ListCreateAPIView):
     serializer_class = GSTInvoiceSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filterset_class = GSTInvoiceFilter
 
     def get_queryset(self):
         user = self.request.user
-        queryset = GSTInvoice.objects.all()
+        queryset = GSTInvoice.objects.select_related(
+            'ticket', 'ticket__branch', 'ticket__customer', 'ticket__status',
+        )
         if user.role == "customer":
             queryset = queryset.filter(ticket__customer=user)
         elif user.role == "shop_owner":
@@ -166,12 +170,15 @@ class GSTInvoiceDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        base_qs = GSTInvoice.objects.select_related(
+            'ticket', 'ticket__branch', 'ticket__customer', 'ticket__status',
+        )
         if user.role == "customer":
-            return GSTInvoice.objects.filter(ticket__customer=user)
+            return base_qs.filter(ticket__customer=user)
         elif user.role == "shop_owner":
-            return GSTInvoice.objects.filter(ticket__branch__organization__owner__user=user)
+            return base_qs.filter(ticket__branch__organization__owner__user=user)
         elif user.role == "technician":
             tech_profile = getattr(user, "technician_profile_new", None)
             if tech_profile and tech_profile.branch:
-                return GSTInvoice.objects.filter(ticket__branch=tech_profile.branch)
+                return base_qs.filter(ticket__branch=tech_profile.branch)
         return GSTInvoice.objects.none()

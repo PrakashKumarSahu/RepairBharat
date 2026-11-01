@@ -18,6 +18,29 @@ from django.contrib import admin
 from django.urls import path
 from django.urls import include
 from rest_framework_simplejwt import views as jwt_views
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from django.utils import timezone
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_check(request):
+    """GET /api/health/ — liveness probe for Docker and uptime monitors."""
+    from django.db import connection
+    try:
+        connection.ensure_connection()
+        db_status = 'ok'
+    except Exception:
+        db_status = 'error'
+    return Response({
+        'status': 'ok',
+        'db': db_status,
+        'timestamp': timezone.now().isoformat(),
+    })
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -26,7 +49,7 @@ urlpatterns = [
     path('api/token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
     path('api/inventory/', include('inventory.urls')),
     path('api/billing/', include('billing.urls')),
-    
+
     # Decoupled Enterprise Endpoints
     path('api/orgs/', include('organizations.urls')),
     path('api/providers/', include('providers.urls')),
@@ -36,4 +59,9 @@ urlpatterns = [
     path('api/notifications/', include('notifications.urls')),
     path('api/analytics/', include('analytics.urls')),
     path('api/audit-log/', include('core.urls')),
+
+    # Health check + OpenAPI / Swagger docs
+    path('api/health/', health_check, name='health-check'),
+    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 ]

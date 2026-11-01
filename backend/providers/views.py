@@ -17,7 +17,7 @@ class TechnicianListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        queryset = Technician.objects.all()
+        queryset = Technician.objects.select_related('user', 'shop', 'branch')
         if user.role == "shop_owner":
             shop_profile = getattr(user, "shop_owner_profile", None)
             if shop_profile:
@@ -68,11 +68,15 @@ class JoinRequestListCreateUpdateView(generics.ListCreateAPIView, generics.Updat
     def get_queryset(self):
         user = self.request.user
         if user.role == "technician":
-            return TechnicianJoinRequest.objects.filter(technician__user=user).order_by("-created_at")
+            return TechnicianJoinRequest.objects.select_related(
+                'technician', 'technician__user', 'shop',
+            ).filter(technician__user=user).order_by("-created_at")
         elif user.role == "shop_owner":
             shop_profile = getattr(user, "shop_owner_profile", None)
             if shop_profile:
-                return TechnicianJoinRequest.objects.filter(shop=shop_profile).order_by("-created_at")
+                return TechnicianJoinRequest.objects.select_related(
+                    'technician', 'technician__user', 'shop',
+                ).filter(shop=shop_profile).order_by("-created_at")
         return TechnicianJoinRequest.objects.none()
 
     def perform_create(self, serializer):
@@ -146,7 +150,7 @@ class JoinRequestListCreateUpdateView(generics.ListCreateAPIView, generics.Updat
 
 
 class TechnicianDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Technician.objects.all()
+    queryset = Technician.objects.select_related('user', 'shop', 'branch')
     serializer_class = TechnicianSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwnerOfTechnicianRecord]
 

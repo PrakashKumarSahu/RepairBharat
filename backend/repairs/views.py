@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from .models import RepairOrder
 from .serializers import RepairOrderSerializer
+from .filters import RepairOrderFilter
 from accounts.models import CustomUser
 from devices.models import Device
 from workflow.models import WorkflowStage
@@ -13,11 +14,20 @@ from core.audit import log_action
 class RepairOrderListCreateView(generics.ListCreateAPIView):
     serializer_class = RepairOrderSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filterset_class = RepairOrderFilter
+    search_fields = ['ticket_number', 'customer__username', 'device__brand', 'device__model']
+    ordering_fields = ['created_at', 'priority', 'estimated_cost']
 
     def get_queryset(self):
         user = self.request.user
+        base_qs = RepairOrder.objects.select_related(
+            'branch', 'customer', 'device', 'status',
+            'assigned_technician', 'assigned_technician__user',
+        ).prefetch_related(
+            'history', 'history__stage', 'history__updated_by',
+        )
         if user.role == "customer":
-            return RepairOrder.objects.filter(customer=user).order_by("-created_at")
+            return base_qs.filter(customer=user).order_by("-created_at")
         elif user.role == "technician":
             tech = Technician.objects.filter(user=user).first()
             if tech:
@@ -27,10 +37,10 @@ class RepairOrderListCreateView(generics.ListCreateAPIView):
                     filters |= Q(branch=tech.branch)
                 elif tech.shop:
                     filters |= Q(branch__organization__owner=tech.shop)
-                return RepairOrder.objects.filter(filters).order_by("-created_at")
+                return base_qs.filter(filters).order_by("-created_at")
             return RepairOrder.objects.none()
         elif user.role == "shop_owner":
-            return RepairOrder.objects.filter(branch__organization__owner__user=user).order_by("-created_at")
+            return base_qs.filter(branch__organization__owner__user=user).order_by("-created_at")
         return RepairOrder.objects.none()
 
     def create(self, request, *args, **kwargs):
@@ -155,8 +165,14 @@ class RepairOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         user = self.request.user
+        base_qs = RepairOrder.objects.select_related(
+            'branch', 'customer', 'device', 'status',
+            'assigned_technician', 'assigned_technician__user',
+        ).prefetch_related(
+            'history', 'history__stage', 'history__updated_by',
+        )
         if user.role == "customer":
-            return RepairOrder.objects.filter(customer=user)
+            return base_qs.filter(customer=user)
         elif user.role == "technician":
             tech = Technician.objects.filter(user=user).first()
             if tech:
@@ -166,10 +182,10 @@ class RepairOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
                     filters |= Q(branch=tech.branch)
                 elif tech.shop:
                     filters |= Q(branch__organization__owner=tech.shop)
-                return RepairOrder.objects.filter(filters)
+                return base_qs.filter(filters)
             return RepairOrder.objects.none()
         elif user.role == "shop_owner":
-            return RepairOrder.objects.filter(branch__organization__owner__user=user)
+            return base_qs.filter(branch__organization__owner__user=user)
         return RepairOrder.objects.none()
 
     def perform_update(self, serializer):
@@ -199,7 +215,10 @@ class RepairOrderDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class PublicRepairOrderTrackView(generics.RetrieveAPIView):
-    queryset = RepairOrder.objects.all()
+    queryset = RepairOrder.objects.select_related(
+        'branch', 'customer', 'device', 'status',
+        'assigned_technician', 'assigned_technician__user',
+    ).prefetch_related('history', 'history__stage', 'history__updated_by')
     serializer_class = RepairOrderSerializer
     permission_classes = [permissions.AllowAny]
     lookup_field = "ticket_number"
