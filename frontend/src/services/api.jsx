@@ -44,6 +44,27 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+/**
+ * Transparently unwrap DRF PageNumberPagination envelopes.
+ * When the backend returns { count, next, previous, results: [...] }
+ * this interceptor normalises it to just the array so every existing
+ * call-site keeps working without changes.
+ * Detail endpoints and non-paginated responses are passed through as-is.
+ */
+api.interceptors.response.use((response) => {
+    const d = response.data;
+    if (
+        d !== null &&
+        typeof d === 'object' &&
+        !Array.isArray(d) &&
+        Array.isArray(d.results) &&
+        'count' in d
+    ) {
+        response.data = d.results;
+    }
+    return response;
+});
+
 export const signup = async (data) => {
     const url = `${getApiUrl()}/accounts/register/`;
     try {
@@ -110,8 +131,7 @@ export const getUserDetails = async (key) => {
 };
 
 export const fetchCustomers = async () => {
-    const url = `${getApiUrl()}/accounts/customers/`;
-    const response = await axios.get(url, { headers: getAuthHeaders() });
+    const response = await api.get('/accounts/customers/');
     return response.data;
 };
 
@@ -191,8 +211,7 @@ export const createBranch = async (data) => {
 
 // ── Scaled Repairs (RepairOrders) APIs ──
 export const fetchTickets = async () => {
-    const url = `${getApiUrl()}/api/repairs/`;
-    const response = await axios.get(url, { headers: getAuthHeaders() });
+    const response = await api.get('/api/repairs/');
     return response.data;
 };
 
@@ -210,16 +229,14 @@ export const updateTicket = async (ticketId, data) => {
 
 // ── Providers (Verified Technicians) API ──
 export const fetchTechnicians = async () => {
-    const url = `${getApiUrl()}/api/providers/technicians/`;
-    const response = await axios.get(url, { headers: getAuthHeaders() });
+    const response = await api.get('/api/providers/technicians/');
     return response.data;
 };
 
 // ── Inventory APIs ──
 export const fetchInventory = async (branchId = "") => {
-    let url = `${getApiUrl()}/api/inventory/`;
-    if (branchId) url += `?branch=${branchId}`;
-    const response = await axios.get(url, { headers: getAuthHeaders() });
+    const params = branchId ? `?branch=${branchId}` : '';
+    const response = await api.get(`/api/inventory/${params}`);
     return response.data;
 };
 
@@ -237,8 +254,7 @@ export const updateInventoryItem = async (itemId, data) => {
 
 // ── Billing APIs ──
 export const fetchInvoices = async () => {
-    const url = `${getApiUrl()}/api/billing/`;
-    const response = await axios.get(url, { headers: getAuthHeaders() });
+    const response = await api.get('/api/billing/');
     return response.data;
 };
 
@@ -250,21 +266,18 @@ export const createInvoice = async (data) => {
 
 // ── Workflow Stages API ──
 export const fetchStages = async () => {
-    const url = `${getApiUrl()}/api/workflow/stages/`;
-    const response = await axios.get(url, { headers: getAuthHeaders() });
+    const response = await api.get('/api/workflow/stages/');
     return response.data;
 };
 
 // ── Shop Search & Join Request API Helpers ──
 export const fetchShops = async (search = "") => {
-    const url = `${getApiUrl()}/api/providers/shops/?search=${search}`;
-    const response = await axios.get(url, { headers: getAuthHeaders() });
+    const response = await api.get(`/api/providers/shops/?search=${search}`);
     return response.data;
 };
 
 export const fetchJoinRequests = async () => {
-    const url = `${getApiUrl()}/api/providers/join-requests/`;
-    const response = await axios.get(url, { headers: getAuthHeaders() });
+    const response = await api.get('/api/providers/join-requests/');
     return response.data;
 };
 
