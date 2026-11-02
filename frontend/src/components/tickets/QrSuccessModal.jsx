@@ -1,4 +1,5 @@
-import { Modal } from "../ui/Modal";
+import QRCode from 'react-qr-code';
+import { Modal } from '../ui/Modal';
 
 /**
  * QR code success modal shown after a ticket is created.
@@ -33,14 +34,20 @@ export function QrSuccessModal({ open, onClose, ticketNumber, deviceName }) {
                     </p>
                 </div>
 
-                {/* QR Code via Google Charts API */}
-                <div className="bg-white p-3 rounded-xl border border-outline-variant shadow-sm">
-                    <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(trackingUrl)}`}
-                        alt="Ticket QR Code"
-                        className="w-[160px] h-[160px]"
-                    />
+                {/* QR Code via react-qr-code */}
+                <div className="flex justify-center my-4">
+                    <div className="bg-white p-3 rounded-xl border border-outline-variant shadow-sm">
+                        <QRCode
+                            value={`${window.location.origin}/track/${ticketNumber}`}
+                            size={180}
+                            level="M"
+                        />
+                    </div>
                 </div>
+
+                <p className="text-center text-xs text-on-surface-variant mt-2">
+                    Scan to track repair status in real-time
+                </p>
 
                 <div className="space-y-1">
                     <p className="text-[11px] font-bold text-outline uppercase tracking-wider">Ticket Number</p>

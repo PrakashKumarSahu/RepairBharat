@@ -1,14 +1,18 @@
 import Modal from '../ui/Modal';
 import { formatRupee } from '../../utils/status';
+import { format, parseISO, isValid } from 'date-fns';
 
 export function InvoicePrintView({ open, onClose, invoice }) {
     if (!open || !invoice) return null;
 
     const formatDate = (dateStr) => {
         if (!dateStr) return 'N/A';
-        return new Date(dateStr).toLocaleDateString('en-IN', {
-            day: '2-digit', month: 'long', year: 'numeric'
-        });
+        try {
+            const d = parseISO(dateStr);
+            return isValid(d) ? format(d, 'dd MMMM yyyy') : 'N/A';
+        } catch {
+            return 'N/A';
+        }
     };
 
     const handlePrint = () => window.print();

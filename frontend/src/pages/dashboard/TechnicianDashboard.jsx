@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { useUserContext } from '../../services';
 import {
-    fetchBranches, fetchTickets, fetchTechnicians, fetchInventory,
-    fetchInvoices, fetchCustomers, fetchJoinRequests, fetchStages,
     fetchShops, createTicket, createInvoice, updateTicket,
-    createJoinRequest
+    createJoinRequest, fetchJoinRequests,
+    fetchBranches, fetchCustomers, fetchTechnicians
 } from '../../services/api';
 import { getStatusLabelAndColor, formatRupee } from '../../utils/status';
-import { usePolling } from '../../hooks/usePolling';
+import { useTechnicianData } from '../../hooks/useRepairData';
+import { useQuery } from '@tanstack/react-query';
 import { Navbar } from '../../components/layout/Navbar';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Spinner } from '../../components/ui/Spinner';
@@ -20,15 +20,15 @@ import { InvoicePrintView } from '../../components/billing/InvoicePrintView';
 export default function TechnicianDashboard() {
     const { user } = useUserContext();
 
-    const [loading, setLoading] = useState(true);
-    const [branches, setBranches] = useState([]);
-    const [tickets, setTickets] = useState([]);
-    const [technicians, setTechnicians] = useState([]);
-    const [inventory, setInventory] = useState([]);
-    const [invoices, setInvoices] = useState([]);
-    const [customers, setCustomers] = useState([]);
-    const [joinRequests, setJoinRequests] = useState([]);
-    const [stages, setStages] = useState([]);
+    const {
+        tickets, stages, invoices, joinRequests,
+        isLoading, refetchTickets, refetchInvoices, refetchAll,
+    } = useTechnicianData();
+
+    // These are lighter queries needed only for the walkin form dropdowns
+    const { data: branches = [] } = useQuery({ queryKey: ['branches'], queryFn: () => fetchBranches({}), staleTime: 120_000 });
+    const { data: customers = [] } = useQuery({ queryKey: ['customers'], queryFn: fetchCustomers, staleTime: 300_000 });
+    const { data: technicians = [] } = useQuery({ queryKey: ['technicians'], queryFn: fetchTechnicians, refetchInterval: 30_000 });
 
     const [activeTab, setActiveTab] = useState('queue');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -48,12 +48,6 @@ export default function TechnicianDashboard() {
 
     // Walkin
     const [showWalkinModal, setShowWalkinModal] = useState(false);
-    const [walkinForm, setWalkinForm] = useState({
-        customer: '', branch: '', device_category: 'Smartphone',
-        device_brand: '', device_model: '', device_serial: '',
-        issue_reported: '', priority: 'medium', estimated_cost: '0.00',
-        advance_paid: '0.00', device_image: ''
-    });
 
     // Diagnostics
     const [selectedTicket, setSelectedTicket] = useState(null);
@@ -74,43 +68,6 @@ export default function TechnicianDashboard() {
     const [selectedPreviewInvoice, setSelectedPreviewInvoice] = useState(null);
     const [showManualInvoiceModal, setShowManualInvoiceModal] = useState(false);
     const [manualInvoiceForm, setManualInvoiceForm] = useState({ shop_gstin: '27AAAAA1111A1Z1', customer_name: '', customer_phone: '', customer_gstin: '', billing_address: '', labor_charges: '0.00', payment_method: 'upi', payment_status: 'paid', items: [] });
-
-    const loadDashboardData = async () => {
-        setLoading(true);
-        try {
-            const [branchData, ticketData, techData, invData, stageData, custData, invList, reqData] = await Promise.all([
-                fetchBranches({}),
-                fetchTickets(),
-                fetchTechnicians(),
-                fetchInventory(),
-                fetchStages(),
-                fetchCustomers(),
-                fetchInvoices(),
-                fetchJoinRequests()
-            ]);
-            setBranches(branchData);
-            setTickets(ticketData);
-            setTechnicians(techData);
-            setInventory(invData);
-            setStages(stageData);
-            setCustomers(custData);
-            setInvoices(invList);
-            setJoinRequests(reqData);
-        } catch (_) {
-            toast.error('Unable to load records. Please refresh.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => { loadDashboardData(); }, []);
-
-    usePolling(async () => {
-        try {
-            const [t, inv, invList, req] = await Promise.all([fetchTickets(), fetchInventory(), fetchInvoices(), fetchJoinRequests()]);
-            setTickets(t); setInventory(inv); setInvoices(invList); setJoinRequests(req);
-        } catch (_) {}
-    }, 10000);
 
     // Derived
     const techDetails = technicians.find(t => t.username === user?.username);
@@ -138,7 +95,7 @@ export default function TechnicianDashboard() {
             await updateTicket(stageNotesTicketId, { status_code: stageNotesCode, stage_notes: stageNotesInput || `Repair transitioned to ${stageObj?.name || 'next stage'}` });
             toast.success('Pipeline milestone updated.');
             setShowStageNotesModal(false); setStageNotesTicketId(null); setStageNotesInput(''); setStageNotesCode('');
-            await loadDashboardData();
+            await refetchAll();
         } catch (_) {
             toast.error('Failed to update milestone.');
         }
@@ -151,28 +108,23 @@ export default function TechnicianDashboard() {
             await updateTicket(selectedTicket.id, { diagnostics_notes: diagNotes, status_code: repairStatus });
             toast.success('Diagnostic logs & workflow stage updated!');
             setSelectedTicket(null); setDiagNotes('');
-            const freshTickets = await fetchTickets(); setTickets(freshTickets);
+            refetchTickets();
         } catch (_) {
             toast.error('Failed updating technical workstation.');
         }
     };
 
-    const handleCreateWalkinSubmit = async (e) => {
-        e.preventDefault();
-        if (!walkinForm.customer || !walkinForm.branch || !walkinForm.device_brand || !walkinForm.device_model || !walkinForm.issue_reported) {
-            toast.error('Please fill all required fields.'); return;
-        }
+    const handleCreateWalkinSubmit = async (data) => {
         try {
-            const payload = { ...walkinForm, device_serial: walkinForm.device_serial || 'N/A' };
+            const payload = { ...data, device_serial: data.device_serial || 'N/A' };
             if (techDetails) payload.assigned_technician = techDetails.id;
             const res = await createTicket(payload);
             toast.success('Walk-in repair order created successfully!');
             setShowWalkinModal(false);
             setSuccessTicketNumber(res.ticket_number);
-            setSuccessDeviceName(`${res.device_brand || walkinForm.device_brand} ${res.device_model || walkinForm.device_model}`);
+            setSuccessDeviceName(`${res.device_brand || data.device_brand} ${res.device_model || data.device_model}`);
             setShowSuccessQrModal(true);
-            setWalkinForm({ customer: '', branch: '', device_category: 'Smartphone', device_brand: '', device_model: '', device_serial: '', issue_reported: '', priority: 'medium', estimated_cost: '0.00', advance_paid: '0.00', device_image: '' });
-            loadDashboardData();
+            refetchTickets();
         } catch (_) {
             toast.error('Failed to register walk-in repair order.');
         }
@@ -195,7 +147,7 @@ export default function TechnicianDashboard() {
         try {
             await createJoinRequest(shopId);
             toast.success('Join request submitted successfully. Awaiting approval!');
-            const freshReqs = await fetchJoinRequests(); setJoinRequests(freshReqs);
+            refetchAll();
         } catch (_) {
             toast.error('Duplicate request or shop join issue.');
         }
@@ -228,7 +180,7 @@ export default function TechnicianDashboard() {
             const res = await createInvoice({ ticket: null, labor_charges: parseFloat(manualInvoiceForm.labor_charges || 0).toFixed(2), shop_gstin: manualInvoiceForm.shop_gstin, customer_gstin: manualInvoiceForm.customer_gstin, billing_address: manualInvoiceForm.billing_address, payment_method: manualInvoiceForm.payment_method, payment_status: manualInvoiceForm.payment_status, manual_items: { customer_name: manualInvoiceForm.customer_name, customer_phone: manualInvoiceForm.customer_phone, items: manualInvoiceForm.items } });
             toast.success('Manual GST invoice generated!');
             setShowManualInvoiceModal(false);
-            const freshInvs = await fetchInvoices(); setInvoices(freshInvs);
+            refetchInvoices();
             setSelectedPreviewInvoice(res); setShowInvoicePreviewModal(true);
         } catch (_) { toast.error('Manual invoice compilation failed.'); }
     };
@@ -271,7 +223,7 @@ export default function TechnicianDashboard() {
                 <div className="flex flex-1 pt-12">
                     <Sidebar activeTab={activeTab} onTabChange={setActiveTab} mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
                     <main className="flex-1 p-margin-mobile md:p-margin-desktop overflow-y-auto max-w-5xl mx-auto space-y-md w-full pb-16">
-                        {loading ? <Spinner label="Accessing workstation database..." /> : (
+                        {isLoading ? <Spinner label="Accessing workstation database..." /> : (
                             <>
                                 {locationControlPanel}
 
@@ -366,7 +318,7 @@ export default function TechnicianDashboard() {
                                                     <h2 className="font-headline-xl text-[28px] font-bold text-primary">Workstation Repairs Queue</h2>
                                                     <p className="font-body-md text-on-surface-variant">Allocated repair orders demanding technical diagnostics and service.</p>
                                                 </div>
-                                                <button onClick={() => { if (branches.length === 0) { toast.error('Establish a physical workstation branch first.'); return; } setWalkinForm({ customer: customers[0]?.id || '', branch: branches.find(b => b.is_local_db)?.id || '', device_category: 'Smartphone', device_brand: '', device_model: '', device_serial: '', issue_reported: '', priority: 'medium', estimated_cost: '0.00', advance_paid: '0.00', device_image: '' }); setShowWalkinModal(true); }} className="h-11 px-4 bg-primary text-on-primary hover:bg-primary-container rounded-lg font-bold flex items-center gap-1.5 text-sm shadow active:scale-95 transition-all self-start md:self-auto">
+                                                <button onClick={() => { if (branches.length === 0) { toast.error('Establish a physical workstation branch first.'); return; } setShowWalkinModal(true); }} className="h-11 px-4 bg-primary text-on-primary hover:bg-primary-container rounded-lg font-bold flex items-center gap-1.5 text-sm shadow active:scale-95 transition-all self-start md:self-auto">
                                                     <span className="material-symbols-outlined text-[18px]">add_box</span>
                                                     <span>Book New Repair Job</span>
                                                 </button>
@@ -652,7 +604,7 @@ export default function TechnicianDashboard() {
 
                 {/* Modals */}
                 <StageTransitionModal open={showStageNotesModal} onClose={() => setShowStageNotesModal(false)} stageCode={stageNotesCode} stages={stages} notesInput={stageNotesInput} onNotesChange={setStageNotesInput} onSubmit={submitStageNotesTransition} />
-                <WalkinModal open={showWalkinModal} onClose={() => setShowWalkinModal(false)} form={walkinForm} onFormChange={setWalkinForm} onSubmit={handleCreateWalkinSubmit} customers={customers} branches={branches} />
+                <WalkinModal open={showWalkinModal} onClose={() => setShowWalkinModal(false)} onSubmit={handleCreateWalkinSubmit} customers={customers} branches={branches} />
                 <InvoicePrintView open={showInvoicePreviewModal} onClose={() => setShowInvoicePreviewModal(false)} invoice={selectedPreviewInvoice} />
                 <QrSuccessModal open={showSuccessQrModal} onClose={() => setShowSuccessQrModal(false)} ticketNumber={successTicketNumber} deviceName={successDeviceName} />
             </div>

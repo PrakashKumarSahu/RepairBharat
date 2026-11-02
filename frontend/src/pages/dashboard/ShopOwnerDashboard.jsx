@@ -1,14 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { useUserContext } from '../../services';
 import {
-    fetchBranches, fetchTickets, fetchTechnicians, fetchInventory,
-    fetchInvoices, fetchCustomers, fetchJoinRequests, fetchStages, createBranch,
+    createBranch,
     createTicket, createInvoice, updateTicket, updateJoinRequest,
     updateTechnician, addInventoryItem
 } from '../../services/api';
 import { getStatusLabelAndColor, formatRupee } from '../../utils/status';
-import { usePolling } from '../../hooks/usePolling';
+import { useShopOwnerData } from '../../hooks/useRepairData';
 import { Navbar } from '../../components/layout/Navbar';
 import { Sidebar } from '../../components/layout/Sidebar';
 import { Spinner } from '../../components/ui/Spinner';
@@ -25,15 +24,11 @@ import Modal from '../../components/ui/Modal';
 export default function ShopOwnerDashboard() {
     const { user } = useUserContext();
 
-    const [loading, setLoading] = useState(true);
-    const [branches, setBranches] = useState([]);
-    const [tickets, setTickets] = useState([]);
-    const [technicians, setTechnicians] = useState([]);
-    const [inventory, setInventory] = useState([]);
-    const [invoices, setInvoices] = useState([]);
-    const [customers, setCustomers] = useState([]);
-    const [joinRequests, setJoinRequests] = useState([]);
-    const [stages, setStages] = useState([]);
+    const {
+        tickets, branches, stages, technicians,
+        inventory, invoices, customers, joinRequests,
+        isLoading, refreshAll,
+    } = useShopOwnerData();
 
     const [activeTab, setActiveTab] = useState('erp');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -48,20 +43,9 @@ export default function ShopOwnerDashboard() {
 
     // Walk-in modal
     const [showWalkinModal, setShowWalkinModal] = useState(false);
-    const [walkinForm, setWalkinForm] = useState({
-        customer: '', branch: '', device_category: 'Smartphone',
-        device_brand: '', device_model: '', device_serial: '',
-        issue_reported: '', priority: 'medium', estimated_cost: '0.00',
-        advance_paid: '0.00', device_image: ''
-    });
 
     // Branch modal
     const [showAddBranchModal, setShowAddBranchModal] = useState(false);
-    const [branchForm, setBranchForm] = useState({
-        name: '', city: 'Mumbai', address: '', phone: '',
-        specialties: 'Mobiles, Laptops, Tablets',
-        latitude: 19.0760, longitude: 72.8777, gst_number: ''
-    });
 
     // Inventory modal
     const [showAddInventory, setShowAddInventory] = useState(false);
@@ -98,48 +82,6 @@ export default function ShopOwnerDashboard() {
     const [successTicketNumber, setSuccessTicketNumber] = useState('');
     const [successDeviceName, setSuccessDeviceName] = useState('');
 
-    const loadDashboardData = async () => {
-        setLoading(true);
-        try {
-            const [branchData, ticketData, techData, invData, invList, custData, reqData, stageData] = await Promise.all([
-                fetchBranches({}),
-                fetchTickets(),
-                fetchTechnicians(),
-                fetchInventory(),
-                fetchInvoices(),
-                fetchCustomers(),
-                fetchJoinRequests(),
-                fetchStages(),
-            ]);
-            setBranches(branchData);
-            setTickets(ticketData);
-            setTechnicians(techData);
-            setInventory(invData);
-            setInvoices(invList);
-            setCustomers(custData);
-            setJoinRequests(reqData);
-            setStages(stageData);
-        } catch (error) {
-            toast.error('Unable to load latest records. Please refresh.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => { loadDashboardData(); }, []);
-
-    usePolling(async () => {
-        try {
-            const [t, inv, invList, req] = await Promise.all([
-                fetchTickets(), fetchInventory(), fetchInvoices(), fetchJoinRequests()
-            ]);
-            setTickets(t);
-            setInventory(inv);
-            setInvoices(invList);
-            setJoinRequests(req);
-        } catch (_) {}
-    }, 10000);
-
     // Derived metrics
     const openTicketsCount = tickets.filter(t => t.status_code !== 'delivered').length;
     const completedTicketsCount = tickets.filter(t => t.status_code === 'ready' || t.status_code === 'delivered').length;
@@ -167,7 +109,7 @@ export default function ShopOwnerDashboard() {
             setShowStageNotesModal(false);
             setStageNotesTicketId(null);
             setStageNotesInput('');
-            await loadDashboardData();
+            refreshAll();
             if (stageNotesCode === 'ready') {
                 setActiveInvoiceTicket(res);
                 setInvoiceBillingAddress(`${res.customer_username || 'Client'} (Contact: ${res.customer_phone || 'N/A'}), Mumbai, Maharashtra, India`);
@@ -183,8 +125,7 @@ export default function ShopOwnerDashboard() {
         try {
             await updateTicket(ticketId, { assigned_technician: techId === '' ? null : techId });
             toast.success('Technician assigned to workstation successfully.');
-            const freshTickets = await fetchTickets();
-            setTickets(freshTickets);
+            refreshAll();
         } catch (_) {
             toast.error('Failed to assign technician.');
         }
@@ -194,7 +135,7 @@ export default function ShopOwnerDashboard() {
         try {
             await updateJoinRequest(requestId, statusValue);
             toast.success(`Join request ${statusValue} successfully.`);
-            loadDashboardData();
+            refreshAll();
         } catch (_) {
             toast.error('Failed to update join request.');
         }
@@ -204,7 +145,7 @@ export default function ShopOwnerDashboard() {
         try {
             await updateTechnician(techId, { is_verified: !currentStatus });
             toast.success('Technician verification status updated successfully.');
-            loadDashboardData();
+            refreshAll();
         } catch (_) {
             toast.error('Failed to toggle verification status.');
         }
@@ -221,8 +162,7 @@ export default function ShopOwnerDashboard() {
             toast.success('New spare item registered in parts inventory.');
             setShowAddInventory(false);
             setInventoryForm({ branch: branches[0]?.id || '', name: '', sku: '', category: 'Display', stock_level: 10, low_stock_threshold: 3, purchase_price: '', selling_price: '', hsn_code: '8517', gst_rate: '18.00', image: '' });
-            const freshInv = await fetchInventory();
-            setInventory(freshInv);
+            refreshAll();
         } catch (_) {
             toast.error('Failed registering spare parts.');
         }
@@ -245,7 +185,7 @@ export default function ShopOwnerDashboard() {
             setLaborCharges('0.00');
             setSelectedPreviewInvoice(res);
             setShowInvoicePreviewModal(true);
-            loadDashboardData();
+            refreshAll();
         } catch (_) {
             toast.error('Invoice compilation failed.');
         }
@@ -274,8 +214,7 @@ export default function ShopOwnerDashboard() {
             });
             toast.success('Custom manual GST invoice generated successfully!');
             setShowManualInvoiceModal(false);
-            const freshInvs = await fetchInvoices();
-            setInvoices(freshInvs);
+            refreshAll();
             setSelectedPreviewInvoice(res);
             setShowInvoicePreviewModal(true);
         } catch (_) {
@@ -283,38 +222,26 @@ export default function ShopOwnerDashboard() {
         }
     };
 
-    const handleCreateBranchSubmit = async (e) => {
-        e.preventDefault();
-        if (!branchForm.name || !branchForm.city || !branchForm.address || !branchForm.phone) {
-            toast.error('Please provide all required branch details.');
-            return;
-        }
+    const handleCreateBranchSubmit = async (data) => {
         try {
-            await createBranch(branchForm);
+            await createBranch(data);
             toast.success('New physical branch registered successfully!');
             setShowAddBranchModal(false);
-            setBranchForm({ name: '', city: 'Mumbai', address: '', phone: '', specialties: 'Mobiles, Laptops, Tablets', latitude: 19.0760, longitude: 72.8777, gst_number: '' });
-            loadDashboardData();
+            refreshAll();
         } catch (_) {
             toast.error('Branch registration failed. Check GST parameters.');
         }
     };
 
-    const handleCreateWalkinSubmit = async (e) => {
-        e.preventDefault();
-        if (!walkinForm.customer || !walkinForm.branch || !walkinForm.device_brand || !walkinForm.device_model || !walkinForm.issue_reported) {
-            toast.error('Please select customer, branch, and fill required device parameters.');
-            return;
-        }
+    const handleCreateWalkinSubmit = async (data) => {
         try {
-            const res = await createTicket({ ...walkinForm, device_serial: walkinForm.device_serial || 'N/A' });
+            const res = await createTicket({ ...data, device_serial: data.device_serial || 'N/A' });
             toast.success('Walk-in repair order created successfully!');
             setShowWalkinModal(false);
             setSuccessTicketNumber(res.ticket_number);
-            setSuccessDeviceName(`${res.device_brand || walkinForm.device_brand} ${res.device_model || walkinForm.device_model}`);
+            setSuccessDeviceName(`${res.device_brand || data.device_brand} ${res.device_model || data.device_model}`);
             setShowSuccessQrModal(true);
-            setWalkinForm({ customer: '', branch: '', device_category: 'Smartphone', device_brand: '', device_model: '', device_serial: '', issue_reported: '', priority: 'medium', estimated_cost: '0.00', advance_paid: '0.00', device_image: '' });
-            loadDashboardData();
+            refreshAll();
         } catch (_) {
             toast.error('Failed to register walk-in repair order.');
         }
@@ -351,7 +278,7 @@ export default function ShopOwnerDashboard() {
                 <div className="flex flex-1 pt-12">
                     <Sidebar activeTab={activeTab} onTabChange={setActiveTab} mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
                     <main className="flex-1 p-margin-mobile md:p-margin-desktop overflow-y-auto max-w-5xl mx-auto space-y-md w-full pb-16">
-                        {loading ? <Spinner label="Accessing workstation database..." /> : (
+                        {isLoading ? <Spinner label="Accessing workstation database..." /> : (
                             <>
                                 {/* ── ERP TAB ── */}
                                 {activeTab === 'erp' && (
@@ -367,11 +294,7 @@ export default function ShopOwnerDashboard() {
                                                     <span>Register Branch</span>
                                                 </button>
                                                 <button
-                                                    onClick={() => {
-                                                        if (branches.length === 0) { toast.error('Please register a branch location first.'); return; }
-                                                        setWalkinForm({ customer: customers[0]?.id || '', branch: branches.find(b => b.is_local_db)?.id || '', device_category: 'Smartphone', device_brand: '', device_model: '', device_serial: '', issue_reported: '', priority: 'medium', estimated_cost: '0.00', advance_paid: '0.00', device_image: '' });
-                                                        setShowWalkinModal(true);
-                                                    }}
+                                                    onClick={() => { if (branches.length === 0) { toast.error('Establish a physical workstation branch first.'); return; } setShowWalkinModal(true); }}
                                                     className="h-11 px-4 bg-primary text-on-primary hover:bg-primary-container rounded-lg font-bold flex items-center gap-1.5 text-sm shadow active:scale-95 transition-all"
                                                 >
                                                     <span className="material-symbols-outlined text-[18px]">add_box</span>
@@ -792,8 +715,6 @@ export default function ShopOwnerDashboard() {
                 <WalkinModal
                     open={showWalkinModal}
                     onClose={() => setShowWalkinModal(false)}
-                    form={walkinForm}
-                    onFormChange={setWalkinForm}
                     onSubmit={handleCreateWalkinSubmit}
                     customers={customers}
                     branches={branches}
@@ -801,8 +722,6 @@ export default function ShopOwnerDashboard() {
                 <CreateBranchModal
                     open={showAddBranchModal}
                     onClose={() => setShowAddBranchModal(false)}
-                    form={branchForm}
-                    onFormChange={setBranchForm}
                     onSubmit={handleCreateBranchSubmit}
                 />
                 <CreateInvoiceModal

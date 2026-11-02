@@ -1,5 +1,11 @@
-import { useState, useEffect } from 'react';
-import toast from 'react-hot-toast';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import {
+    PieChart, Pie, Cell, Tooltip as RechartsTooltip,
+    ResponsiveContainer, Legend,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid,
+} from 'recharts';
+import { format, parseISO } from 'date-fns';
 import {
     fetchAnalyticsKPIs,
     fetchRevenueOverTime,
@@ -8,8 +14,10 @@ import {
     fetchLowStockSummary,
 } from '../../services/api';
 import { formatRupee } from '../../utils/status';
-import { Spinner } from '../ui/Spinner';
+import { SkeletonKpi } from '../ui/Skeleton';
 import { EmptyState } from '../ui/EmptyState';
+
+const CHART_COLORS = ['#00288e', '#1a56db', '#e3a008', '#0ea5e9', '#10b981', '#ef4444', '#8b5cf6'];
 
 function KpiCard({ label, value, icon, sub, colorClass = 'text-primary' }) {
     return (
@@ -24,59 +32,42 @@ function KpiCard({ label, value, icon, sub, colorClass = 'text-primary' }) {
     );
 }
 
-function DonutChart({ data }) {
-    // Simple SVG donut
-    const total = data.reduce((s, d) => s + d.count, 0);
-    if (!total) return <p className="text-xs text-on-surface-variant">No data</p>;
-    const COLORS = ['#00288e', '#1a56db', '#e3a008', '#0ea5e9', '#10b981', '#ef4444', '#8b5cf6'];
-    let cumulative = 0;
-    const radius = 50;
-    const cx = 60;
-    const cy = 60;
-    const circumference = 2 * Math.PI * radius;
-
-    const slices = data.map((d, i) => {
-        const pct = d.count / total;
-        const dash = pct * circumference;
-        const gap = circumference - dash;
-        const offset = cumulative * circumference;
-        cumulative += pct;
-        return { ...d, dash, gap, offset, color: COLORS[i % COLORS.length], pct };
-    });
-
+function StatusDonut({ data }) {
+    if (!data?.length) return <EmptyState icon="donut_large" message="No ticket data yet" />;
     return (
-        <div className="flex items-center gap-4">
-            <svg width="120" height="120" viewBox="0 0 120 120">
-                {slices.map((s, i) => (
-                    <circle
-                        key={i}
-                        cx={cx} cy={cy} r={radius}
-                        fill="none"
-                        stroke={s.color}
-                        strokeWidth="18"
-                        strokeDasharray={`${s.dash} ${s.gap}`}
-                        strokeDashoffset={-s.offset}
-                        transform={`rotate(-90 ${cx} ${cy})`}
-                    />
-                ))}
-                <text x={cx} y={cy + 5} textAnchor="middle" fontSize="14" fontWeight="bold" fill="currentColor">{total}</text>
-            </svg>
-            <div className="flex flex-col gap-1">
-                {slices.map((s, i) => (
-                    <div key={i} className="flex items-center gap-1.5 text-xs">
-                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: s.color }} />
-                        <span className="text-on-surface-variant capitalize">{s.status_code?.replace('_', ' ') || s.label}</span>
-                        <span className="font-semibold text-on-surface ml-auto">{s.count}</span>
-                    </div>
-                ))}
-            </div>
-        </div>
+        <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+                <Pie
+                    data={data}
+                    dataKey="count"
+                    nameKey="status_code"
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={85}
+                    paddingAngle={2}
+                >
+                    {data.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                </Pie>
+                <RechartsTooltip
+                    formatter={(value, name) => [value, String(name).replace(/_/g, ' ')]}
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e0e0e0', fontSize: '12px' }}
+                />
+                <Legend
+                    formatter={(value) => String(value).replace(/_/g, ' ')}
+                    iconType="circle"
+                    iconSize={8}
+                    wrapperStyle={{ fontSize: '11px' }}
+                />
+            </PieChart>
+        </ResponsiveContainer>
     );
 }
 
-function RevenueChart({ data, range, onRangeChange }) {
-    if (!data || data.length === 0) return <p className="text-xs text-on-surface-variant py-4">No revenue data for this period.</p>;
-    const max = Math.max(...data.map((d) => d.revenue), 1);
+function RevenueBarChart({ data, range, onRangeChange }) {
+    if (!data?.length) return <p className="text-xs text-on-surface-variant py-4">No revenue data for this period.</p>;
     return (
         <div>
             <div className="flex gap-2 mb-3">
@@ -94,137 +85,118 @@ function RevenueChart({ data, range, onRangeChange }) {
                     </button>
                 ))}
             </div>
-            <div className="flex items-end gap-0.5 h-32 overflow-x-auto pb-1">
-                {data.map((d) => (
-                    <div key={d.date} className="flex flex-col items-center gap-0.5 min-w-[18px]" title={`${d.date}: ₹${d.revenue.toLocaleString()}`}>
-                        <div
-                            className="w-3.5 bg-primary rounded-t hover:bg-primary/80 transition-colors"
-                            style={{ height: `${Math.max(2, (d.revenue / max) * 120)}px` }}
-                        />
-                    </div>
-                ))}
-            </div>
+            <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={data} margin={{ top: 4, right: 4, bottom: 4, left: -10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" vertical={false} />
+                    <XAxis
+                        dataKey="date"
+                        tickFormatter={(v) => { try { return format(parseISO(v), 'dd MMM'); } catch { return v; } }}
+                        tick={{ fontSize: 10 }}
+                        tickLine={false}
+                        axisLine={false}
+                        interval="preserveStartEnd"
+                    />
+                    <YAxis
+                        tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
+                        tick={{ fontSize: 10 }}
+                        tickLine={false}
+                        axisLine={false}
+                    />
+                    <RechartsTooltip
+                        formatter={(v) => [formatRupee(v), 'Revenue']}
+                        labelFormatter={(label) => { try { return format(parseISO(label), 'dd MMM yyyy'); } catch { return label; } }}
+                        contentStyle={{ borderRadius: '8px', border: '1px solid #e0e0e0', fontSize: '12px' }}
+                    />
+                    <Bar dataKey="revenue" fill="#00288e" radius={[4, 4, 0, 0]} maxBarSize={18} />
+                </BarChart>
+            </ResponsiveContainer>
             <p className="text-[10px] text-on-surface-variant mt-1">Daily paid revenue (₹). Hover bars for detail.</p>
         </div>
     );
 }
 
-export function AnalyticsDashboard() {
-    const [loading, setLoading] = useState(true);
-    const [kpis, setKpis] = useState(null);
-    const [revenueData, setRevenueData] = useState([]);
-    const [ticketStatus, setTicketStatus] = useState([]);
-    const [techPerf, setTechPerf] = useState([]);
-    const [lowStock, setLowStock] = useState({ count: 0, items: [] });
+function AnalyticsDashboard() {
     const [revenueRange, setRevenueRange] = useState('30d');
 
-    const load = async (range = revenueRange) => {
-        setLoading(true);
-        try {
-            const [k, rev, ts, tp, ls] = await Promise.all([
-                fetchAnalyticsKPIs(),
-                fetchRevenueOverTime(range),
-                fetchTicketStatusSummary(),
-                fetchTechnicianPerformance(),
-                fetchLowStockSummary(),
-            ]);
-            setKpis(k);
-            setRevenueData(rev.data || []);
-            setTicketStatus(ts.data || []);
-            setTechPerf(tp.data || []);
-            setLowStock(ls);
-        } catch (err) {
-            toast.error('Failed to load analytics');
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { data: kpis = {}, isPending: kpisLoading } = useQuery({
+        queryKey: ['analytics-kpis'],
+        queryFn: fetchAnalyticsKPIs,
+        refetchInterval: 60_000,
+    });
 
-    useEffect(() => { load(); }, []);
+    const { data: revenueData = [] } = useQuery({
+        queryKey: ['analytics-revenue', revenueRange],
+        queryFn: () => fetchRevenueOverTime(revenueRange),
+    });
 
-    const handleRangeChange = (r) => {
-        setRevenueRange(r);
-        load(r);
-    };
+    const { data: statusSummary = [] } = useQuery({
+        queryKey: ['analytics-status'],
+        queryFn: fetchTicketStatusSummary,
+        refetchInterval: 60_000,
+    });
 
-    if (loading) return <Spinner label="Loading analytics..." />;
+    const { data: techPerf = [] } = useQuery({
+        queryKey: ['analytics-tech'],
+        queryFn: fetchTechnicianPerformance,
+        refetchInterval: 120_000,
+    });
+
+    const { data: lowStock = { items: [] } } = useQuery({
+        queryKey: ['analytics-lowstock'],
+        queryFn: fetchLowStockSummary,
+        refetchInterval: 120_000,
+    });
 
     return (
         <div className="space-y-6">
-            <h2 className="text-lg font-bold text-on-surface">Analytics & Reporting</h2>
-
             {/* KPI Cards */}
-            {kpis && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    <KpiCard label="Total Tickets" value={kpis.total_tickets} icon="confirmation_number" />
-                    <KpiCard label="Open Tickets" value={kpis.open_tickets} icon="pending" colorClass="text-secondary" />
-                    <KpiCard label="Closed This Month" value={kpis.closed_this_month} icon="check_circle" colorClass="text-success" />
-                    <KpiCard label="Total Revenue (Paid)" value={formatRupee(kpis.total_revenue_paid)} icon="currency_rupee" colorClass="text-primary" />
-                </div>
-            )}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {kpisLoading ? (
+                    Array.from({ length: 4 }).map((_, i) => <SkeletonKpi key={i} />)
+                ) : (
+                    <>
+                        <KpiCard label="Total Revenue (Paid)" value={formatRupee(kpis.total_revenue_paid)} icon="currency_rupee" colorClass="text-primary" />
+                        <KpiCard label="Open Tickets" value={kpis.open_tickets ?? '—'} icon="confirmation_number" colorClass="text-yellow-600" sub="Awaiting action" />
+                        <KpiCard label="Delivered Today" value={kpis.delivered_today ?? '—'} icon="check_circle" colorClass="text-green-600" />
+                        <KpiCard label="Low Stock Items" value={kpis.low_stock_count ?? '—'} icon="inventory_2" colorClass="text-red-600" sub="Below threshold" />
+                    </>
+                )}
+            </div>
 
-            {/* Low Stock Alert */}
-            {lowStock.count > 0 && (
-                <div className="bg-error/10 border border-error/30 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="material-symbols-outlined text-error text-[18px]">warning</span>
-                        <span className="font-semibold text-error text-sm">{lowStock.count} item{lowStock.count !== 1 ? 's' : ''} low on stock</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        {lowStock.items.slice(0, 8).map((item) => (
-                            <span key={item.id} className="text-xs bg-error/10 text-error px-2 py-0.5 rounded-full border border-error/20">
-                                {item.name} ({item.stock_level}/{item.low_stock_threshold})
-                            </span>
-                        ))}
-                        {lowStock.items.length > 8 && (
-                            <span className="text-xs text-error">+{lowStock.items.length - 8} more</span>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Revenue chart */}
+            {/* Charts row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-surface border border-outline-variant rounded-xl p-4">
-                    <h3 className="font-semibold text-sm text-on-surface mb-3">Revenue Over Time</h3>
-                    <RevenueChart data={revenueData} range={revenueRange} onRangeChange={handleRangeChange} />
+                    <h3 className="font-bold text-sm text-on-surface mb-3">Ticket Status Breakdown</h3>
+                    <StatusDonut data={statusSummary} />
                 </div>
-
-                {/* Ticket status donut */}
                 <div className="bg-surface border border-outline-variant rounded-xl p-4">
-                    <h3 className="font-semibold text-sm text-on-surface mb-3">Tickets by Status</h3>
-                    <DonutChart data={ticketStatus} />
+                    <h3 className="font-bold text-sm text-on-surface mb-3">Revenue Trend</h3>
+                    <RevenueBarChart data={revenueData} range={revenueRange} onRangeChange={setRevenueRange} />
                 </div>
             </div>
 
-            {/* Technician Performance */}
-            <div className="bg-surface border border-outline-variant rounded-xl p-4">
-                <h3 className="font-semibold text-sm text-on-surface mb-3">Technician Performance</h3>
-                {techPerf.length === 0 ? (
-                    <EmptyState icon="engineering" message="No technician performance data yet." />
-                ) : (
-                    <div className="overflow-x-auto">
+            {/* Tech performance + Low stock */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {techPerf.length > 0 && (
+                    <div className="bg-surface border border-outline-variant rounded-xl p-4">
+                        <h3 className="font-bold text-sm text-on-surface mb-3">Technician Performance</h3>
                         <table className="w-full text-xs">
                             <thead>
-                                <tr className="border-b border-outline-variant text-left">
-                                    <th className="pb-2 font-semibold text-on-surface-variant">Technician</th>
-                                    <th className="pb-2 font-semibold text-on-surface-variant text-right">Closed Tickets</th>
-                                    <th className="pb-2 font-semibold text-on-surface-variant text-right">Verified</th>
+                                <tr className="text-outline uppercase font-bold text-[10px] border-b border-outline-variant">
+                                    <th className="py-2 text-left">Technician</th>
+                                    <th className="py-2 text-right">Closed</th>
+                                    <th className="py-2 text-right">Verified</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-outline-variant">
                                 {techPerf.map((t) => (
                                     <tr key={t.technician_id}>
                                         <td className="py-2 font-medium text-on-surface">{t.display_name}</td>
+                                        <td className="py-2 text-right font-bold text-primary">{t.closed_tickets}</td>
                                         <td className="py-2 text-right">
-                                            <span className="font-bold text-primary">{t.closed_tickets}</span>
-                                        </td>
-                                        <td className="py-2 text-right">
-                                            {t.is_verified ? (
-                                                <span className="text-success material-symbols-outlined text-[16px]">verified</span>
-                                            ) : (
-                                                <span className="text-on-surface-variant material-symbols-outlined text-[16px]">pending</span>
-                                            )}
+                                            <span className={`material-symbols-outlined text-[16px] ${t.is_verified ? 'text-green-600' : 'text-on-surface-variant'}`}>
+                                                {t.is_verified ? 'verified' : 'pending'}
+                                            </span>
                                         </td>
                                     </tr>
                                 ))}
@@ -232,9 +204,28 @@ export function AnalyticsDashboard() {
                         </table>
                     </div>
                 )}
+                {lowStock.items?.length > 0 && (
+                    <div className="bg-surface border border-outline-variant rounded-xl p-4">
+                        <h3 className="font-bold text-sm text-on-surface mb-1">
+                            Low Stock Alert
+                            <span className="ml-2 text-[10px] bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-semibold">
+                                {lowStock.items.length} items
+                            </span>
+                        </h3>
+                        <div className="space-y-2 mt-3">
+                            {lowStock.items.slice(0, 8).map((item) => (
+                                <div key={item.id} className="flex justify-between items-center text-xs">
+                                    <span className="font-medium text-on-surface truncate">{item.name}</span>
+                                    <span className="font-bold text-red-600 shrink-0 ml-2">{item.stock_level} left</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
 }
 
+export { AnalyticsDashboard };
 export default AnalyticsDashboard;
