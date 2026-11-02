@@ -114,8 +114,8 @@ export function InvoicePrintView({ open, onClose, invoice }) {
                     All prices are inclusive of applicable taxes.
                 </p>
 
-                {/* Actions */}
-                <div className="flex gap-3 pt-2">
+                {/* Actions — hidden when printing */}
+                <div className="flex gap-3 pt-2 no-print">
                     <button
                         onClick={handlePrint}
                         className="flex-1 h-11 bg-primary text-on-primary rounded-lg font-bold flex items-center justify-center gap-1.5 text-sm shadow active:scale-95 transition-transform"

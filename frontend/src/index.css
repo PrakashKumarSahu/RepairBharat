@@ -16,3 +16,46 @@ html, body {
   display: flex;
   flex-direction: column;
 }
+
+/* ─── Print styles — hide all chrome when printing an invoice ──────────────── */
+@media print {
+  /* Hide navigation, sidebars, modal backdrop, and action buttons */
+  nav,
+  aside,
+  .no-print,
+  [data-no-print],
+  button:not(#invoice-print-area button),
+  .modal-backdrop {
+    display: none !important;
+  }
+
+  /* Reset page chrome */
+  html, body {
+    background: #fff !important;
+    color: #000 !important;
+    font-size: 11pt;
+  }
+
+  /* Expand invoice content to fill the page */
+  #invoice-print-area {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Make sure modal container doesn't clip */
+  .fixed, .overflow-y-auto {
+    position: static !important;
+    overflow: visible !important;
+  }
+
+  /* Page break control */
+  table { page-break-inside: avoid; }
+  tr    { page-break-inside: avoid; page-break-after: auto; }
+
+  /* Remove link underlines */
+  a { text-decoration: none; color: #000; }
+}

@@ -218,7 +218,7 @@ export default function CustomerDashboard() {
                         mobileOpen={mobileMenuOpen}
                         onMobileClose={() => setMobileMenuOpen(false)}
                     />
-                    <main className="flex-1 p-margin-mobile md:p-margin-desktop overflow-y-auto max-w-5xl mx-auto space-y-md w-full pb-16">
+                    <main className="flex-1 p-margin-mobile md:p-margin-desktop overflow-y-auto max-w-5xl mx-auto space-y-md w-full pb-24 md:pb-16">
                         {loading ? (
                             <Spinner label="Accessing workstation database..." />
                         ) : (
@@ -622,6 +622,37 @@ export default function CustomerDashboard() {
                     ticketNumber={successTicketNumber}
                     deviceName={successDeviceName}
                 />
+
+                {/* ── Mobile bottom navigation (customers only, md+ uses sidebar) ── */}
+                <nav className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-surface border-t border-outline-variant shadow-[0_-2px_8px_rgba(0,0,0,0.08)] no-print">
+                    <div className="flex">
+                        {[
+                            { tab: 'repairs',   icon: 'handyman',   label: 'My Repairs' },
+                            { tab: 'workshops', icon: 'explore',    label: 'Workshops'  },
+                        ].map(({ tab, icon, label }) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-3 transition-colors ${
+                                    activeTab === tab
+                                        ? 'text-primary'
+                                        : 'text-on-surface-variant hover:text-on-surface'
+                                }`}
+                            >
+                                <span
+                                    className="material-symbols-outlined text-[24px] leading-none"
+                                    style={activeTab === tab ? { fontVariationSettings: "'FILL' 1" } : {}}
+                                >
+                                    {icon}
+                                </span>
+                                <span className="text-[10px] font-semibold">{label}</span>
+                                {activeTab === tab && (
+                                    <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full" />
+                                )}
+                            </button>
+                        ))}
+                    </div>
+                </nav>
             </div>
         </>
     );
