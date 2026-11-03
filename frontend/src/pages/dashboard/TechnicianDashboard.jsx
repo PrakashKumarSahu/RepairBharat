@@ -227,7 +227,62 @@ export default function TechnicianDashboard() {
                             <>
                                 {locationControlPanel}
 
-                                {/* ── QUEUE TAB ── */}
+                                {/* ── FIND & JOIN A SHOP BANNER (unlinked technicians only) ── */}
+                                {!techDetails?.shop && (
+                                  <div className="bg-primary-container border border-primary/20 rounded-xl p-5 mb-4">
+                                    <div className="flex items-start gap-3">
+                                      <span className="material-symbols-outlined text-primary text-[28px] mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>store_search</span>
+                                      <div className="flex-1">
+                                        <h3 className="font-bold text-on-primary-container text-base">Find & Join a Repair Shop</h3>
+                                        <p className="text-sm text-on-primary-container/80 mt-0.5">Search for a shop by name or owner username and send a join request. You can work independently until approved.</p>
+                                        <form onSubmit={handleSearchShops} className="flex gap-2 mt-3">
+                                          <input
+                                            value={shopSearchInput}
+                                            onChange={e => setShopSearchInput(e.target.value)}
+                                            placeholder="Search shop name or owner..."
+                                            className="flex-1 h-10 px-3 rounded-lg border border-outline bg-surface text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                                          />
+                                          <button type="submit" className="h-10 px-4 bg-primary text-on-primary rounded-lg font-bold text-sm active:scale-95 transition-transform">
+                                            Search
+                                          </button>
+                                        </form>
+                                        {shopsSearchResults.length > 0 && (
+                                          <div className="mt-3 space-y-2">
+                                            {shopsSearchResults.map(shop => {
+                                              const alreadyRequested = joinRequests.some(r => r.shop === shop.id);
+                                              return (
+                                                <div key={shop.id} className="flex items-center justify-between bg-surface rounded-lg p-3 border border-outline-variant">
+                                                  <div>
+                                                    <p className="font-semibold text-on-surface text-sm">{shop.shop_name}</p>
+                                                    <p className="text-xs text-on-surface-variant">{shop.owner_username}</p>
+                                                  </div>
+                                                  <button
+                                                    onClick={() => !alreadyRequested && handleRequestToJoinShop(shop.id)}
+                                                    disabled={alreadyRequested}
+                                                    className={`px-3 h-8 rounded-lg text-xs font-bold transition-all ${alreadyRequested ? 'bg-surface-variant text-outline cursor-default' : 'bg-primary text-on-primary active:scale-95'}`}
+                                                  >
+                                                    {alreadyRequested ? 'Requested' : 'Request to Join'}
+                                                  </button>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
+                                        {joinRequests.length > 0 && (
+                                          <div className="mt-3 pt-3 border-t border-primary/20">
+                                            <p className="text-xs font-bold text-outline uppercase tracking-wider mb-2">Your Requests</p>
+                                            {joinRequests.map(req => (
+                                              <div key={req.id} className="flex items-center justify-between text-sm py-1">
+                                                <span className="text-on-primary-container">{req.shop_name}</span>
+                                                <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase ${req.status === 'approved' ? 'bg-secondary-container text-on-secondary-container' : req.status === 'rejected' ? 'bg-error-container text-on-error-container' : 'bg-surface-variant text-on-surface-variant'}`}>{req.status}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                                 {activeTab === 'queue' && (() => {
                                     // Not linked to a shop
                                     if (!techDetails || !techDetails.shop) {

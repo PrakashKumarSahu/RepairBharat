@@ -15,6 +15,42 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [permissions.AllowAny]
 
+    def perform_create(self, serializer):
+        user = serializer.save()
+
+        # Auto-bootstrap Organization + Branch for new shop owners
+        if user.role == 'shop_owner':
+            from organizations.models import Organization, Branch
+            from accounts.models import ShopOwnerProfile
+            shop_profile, _ = ShopOwnerProfile.objects.get_or_create(
+                user=user,
+                defaults={
+                    'shop_name': f"{user.username}'s Shop",
+                    'shop_address': 'Update your address',
+                }
+            )
+            if not Organization.objects.filter(owner=shop_profile).exists():
+                org = Organization.objects.create(
+                    owner=shop_profile,
+                    name=f"{user.username}'s Shop",
+                    gst_number='',
+                )
+                Branch.objects.create(
+                    organization=org,
+                    name=f"{user.username}'s Shop",
+                    city='Mumbai',
+                    address='Update your address in settings',
+                    phone=user.phone or '',
+                    specialties='Mobiles, Laptops, Electronics',
+                    latitude=19.0760,
+                    longitude=72.8777,
+                )
+
+        # Ensure providers.Technician record exists for technicians
+        if user.role == 'technician':
+            from providers.models import Technician
+            Technician.objects.get_or_create(user=user)
+
 
 class ProfileView(generics.RetrieveAPIView):
     serializer_class = UserSerializer

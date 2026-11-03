@@ -115,7 +115,8 @@ export default function CustomerDashboard() {
         }
         try {
             const payload = {
-                branch: selectedBranch.id,
+                branch: selectedBranch?.id,
+                customer: user?.id,
                 device_category: bookingForm.device_category,
                 device_brand: bookingForm.device_brand,
                 device_model: bookingForm.device_model,

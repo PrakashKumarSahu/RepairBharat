@@ -19,7 +19,6 @@ export default function Signup() {
     password: '',
     confirmPassword: '',
     role: '',
-    shop_to_which_he_belong: '',
   });
 
   const [showPass, setShowPass] = useState(false);
@@ -33,8 +32,8 @@ export default function Signup() {
   };
 
   const setRole = (id) => {
-    setForm((p) => ({ ...p, role: id, shop_to_which_he_belong: '' }));
-    setErrors((p) => ({ ...p, role: '', shop_to_which_he_belong: '' }));
+    setForm((p) => ({ ...p, role: id }));
+    setErrors((p) => ({ ...p, role: '' }));
   };
 
   const validate = () => {
@@ -48,8 +47,6 @@ export default function Signup() {
     if (form.password.length < 8) e.password = 'Minimum 8 characters needed';
     if (form.confirmPassword !== form.password) e.confirmPassword = 'Passwords do not match';
     if (!form.role) e.role = 'Please select your role';
-    if (form.role === 'technician' && !form.shop_to_which_he_belong.trim())
-      e.shop_to_which_he_belong = 'Please enter the shop name';
     return e;
   };
 
@@ -64,7 +61,8 @@ export default function Signup() {
     setLoading(true);
 
     try {
-      const response = await signup(form);
+      const { confirmPassword, ...payload } = form;
+      const response = await signup(payload);
       if (response.status === 201) {
         toast.success("Account created successfully!");
         setTimeout(() => {
@@ -182,7 +180,7 @@ export default function Signup() {
                 </div>
               </div>
 
-              {/* Row 2: Phone & Optional Shop Assignment */}
+              {/* Row 2: Phone */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-xs">
                   <label className="font-label-md text-[13px] text-on-surface-variant ml-xs" htmlFor="reg-phone">Phone Number *</label>
@@ -204,29 +202,7 @@ export default function Signup() {
                   {errors.phone && <p className="text-error text-[11px] mt-0.5 ml-1 font-semibold">{errors.phone}</p>}
                 </div>
 
-                {form.role === 'technician' ? (
-                  <div className="space-y-xs animate-fadeIn">
-                    <label className="font-label-md text-[13px] text-on-surface-variant ml-xs" htmlFor="reg-shop">Shop Assignment *</label>
-                    <div className="relative flex items-center">
-                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <span className="material-symbols-outlined text-[18px] text-outline">storefront</span>
-                      </div>
-                      <input
-                        className={`w-full h-11 pl-10 pr-md bg-surface-container-lowest border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all font-body-md text-[14px] ${
-                          errors.shop_to_which_he_belong ? 'border-error' : 'border-outline'
-                        }`}
-                        id="reg-shop"
-                        placeholder="Assigned Shop Name"
-                        type="text"
-                        value={form.shop_to_which_he_belong}
-                        onChange={set('shop_to_which_he_belong')}
-                      />
-                    </div>
-                    {errors.shop_to_which_he_belong && <p className="text-error text-[11px] mt-0.5 ml-1 font-semibold">{errors.shop_to_which_he_belong}</p>}
-                  </div>
-                ) : (
-                  <div className="hidden md:block"></div>
-                )}
+                <div className="hidden md:block"></div>
               </div>
 
               {/* Row 3: Password & Confirm Password */}

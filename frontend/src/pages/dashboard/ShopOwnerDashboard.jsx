@@ -289,9 +289,28 @@ export default function ShopOwnerDashboard() {
                                                 <p className="font-body-md text-on-surface-variant">Real-time shop operations oversight and workflow allocation.</p>
                                             </div>
                                             <div className="flex gap-2 flex-wrap">
-                                                <button onClick={() => setShowAddBranchModal(true)} className="h-11 px-4 bg-secondary text-on-secondary hover:bg-secondary/90 rounded-lg font-bold flex items-center gap-1.5 text-sm shadow active:scale-95 transition-all">
-                                                    <span className="material-symbols-outlined text-[18px]">add_business</span>
-                                                    <span>Register Branch</span>
+                                                {branches.length > 0 && (
+                                                  <div className="bg-surface-variant rounded-xl p-4 border border-outline-variant w-full">
+                                                    <div className="flex items-start justify-between">
+                                                      <div>
+                                                        <p className="text-xs font-bold text-outline uppercase tracking-wider">Your Shop</p>
+                                                        <h3 className="font-bold text-on-surface text-lg mt-0.5">{branches[0].name}</h3>
+                                                        <p className="text-sm text-on-surface-variant mt-1">{branches[0].address}</p>
+                                                        {branches[0].phone && <p className="text-xs text-outline mt-0.5">📞 {branches[0].phone}</p>}
+                                                      </div>
+                                                      <span className="material-symbols-outlined text-primary text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>storefront</span>
+                                                    </div>
+                                                    {branches.length > 1 && (
+                                                      <p className="text-xs text-on-surface-variant mt-2">+{branches.length - 1} more branch{branches.length > 2 ? 'es' : ''}</p>
+                                                    )}
+                                                  </div>
+                                                )}
+                                                <button
+                                                  onClick={() => setShowAddBranchModal(true)}
+                                                  className="text-primary text-sm font-semibold flex items-center gap-1 hover:underline mt-2"
+                                                >
+                                                  <span className="material-symbols-outlined text-[16px]">add</span>
+                                                  {branches.length === 0 ? 'Set up your shop' : 'Add another branch'}
                                                 </button>
                                                 <button
                                                     onClick={() => { if (branches.length === 0) { toast.error('Establish a physical workstation branch first.'); return; } setShowWalkinModal(true); }}
